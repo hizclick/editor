@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>የቤተሰብ ሰነድ አርታኢ · TEI Editor</title>
+<style>
+  :root{
+    --vellum:#efe6d2; --vellum-deep:#e7dcc4; --ink:#2a2620; --ink-soft:#6b6253;
+    --oxblood:#8a2e22; --oxblood-soft:#a8503f; --indigo:#2f3b66; --gold:#b08524;
+    --gold-soft:rgba(176,133,36,.16); --rule:#cdbf9f; --paper:#f7f1e3;
+    --shadow:rgba(60,45,20,.18); --green:#3f6b3a; --serif-eth:'Noto Serif Ethiopic',Georgia,serif;
+    --sans-eth:'Noto Sans Ethiopic',system-ui,sans-serif; --serif-lat:'Spectral',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--vellum);color:var(--ink);font-family:var(--serif-eth);
+    line-height:1.7;-webkit-font-smoothing:antialiased}
+  /* ---- top bar ---- */
+  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.8rem;
+    padding:.6rem 1.1rem;background:var(--ink);color:var(--paper);
+    box-shadow:0 2px 10px var(--shadow);flex-wrap:wrap}
+  .topbar h1{font-size:1rem;margin:0;font-weight:600;letter-spacing:.01em;font-family:var(--sans-eth)}
+  .topbar .sub{font-size:.72rem;color:#cbb98a;font-family:var(--serif-lat);font-style:italic}
+  .spacer{flex:1}
+  .btn{font-family:var(--sans-eth);font-size:.82rem;border:1px solid var(--rule);
+    background:var(--paper);color:var(--ink);padding:.45rem .8rem;border-radius:5px;
+    cursor:pointer;transition:.13s;white-space:nowrap}
+  .btn:hover{background:var(--gold-soft);border-color:var(--gold)}
+  .btn-primary{background:var(--oxblood);color:#fff;border-color:var(--oxblood)}
+  .btn-primary:hover{background:var(--oxblood-soft);border-color:var(--oxblood-soft)}
+  .btn-ghost{background:transparent;color:var(--paper);border-color:#4a443a}
+  .btn-ghost:hover{background:#3a342b}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  /* ---- layout ---- */
+  .wrap{max-width:920px;margin:0 auto;padding:1.5rem 1.2rem 6rem}
+  .intro{background:var(--paper);border:1px solid var(--rule);border-radius:8px;
+    padding:1.2rem 1.4rem;margin-bottom:1.4rem;box-shadow:0 2px 8px var(--shadow)}
+  .intro h2{margin:.1rem 0 .5rem;font-size:1.15rem;color:var(--oxblood)}
+  .intro p{margin:.4rem 0;font-size:.93rem;color:var(--ink-soft)}
+  .intro .am{color:var(--ink)}
+  .drop{border:2px dashed var(--rule);border-radius:8px;padding:2rem;text-align:center;
+    background:var(--paper);cursor:pointer;transition:.15s}
+  .drop:hover,.drop.over{border-color:var(--gold);background:var(--gold-soft)}
+  .drop .big{font-size:1.05rem;color:var(--ink);margin-bottom:.3rem;font-family:var(--sans-eth)}
+  .drop .small{font-size:.82rem;color:var(--ink-soft)}
+  /* ---- document ---- */
+  .doc{background:var(--paper);border:1px solid var(--rule);border-radius:8px;
+    padding:1.6rem 1.8rem;box-shadow:0 3px 14px var(--shadow);min-height:60vh}
+  .doc-title{font-size:1.5rem;color:var(--oxblood);text-align:center;margin:.2rem 0 1.4rem;
+    line-height:1.4;font-weight:700}
+  .doc-title[contenteditable]:focus{outline:2px solid var(--gold);outline-offset:4px;border-radius:4px}
+  .chapter{margin:0 0 2rem}
+  .chapter-h{font-size:1.3rem;color:var(--oxblood);border-bottom:2px solid var(--rule);
+    padding-bottom:.3rem;margin:1.6rem 0 .9rem;font-weight:700}
+  .section-h{font-size:1.08rem;color:var(--gold);margin:1.1rem 0 .5rem;font-weight:600}
+  .subsection-h{font-size:.98rem;color:var(--ink);margin:.9rem 0 .4rem;font-weight:600;
+    border-left:3px solid var(--gold);padding-left:.5rem}
+  .subsubsection-h{font-size:.9rem;color:var(--ink-soft);margin:.7rem 0 .35rem;font-weight:600;
+    text-transform:uppercase;letter-spacing:.03em}
+  .chapter-h,.section-h,.subsection-h,.subsubsection-h{cursor:context-menu}
+  .add-zone{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin:1.4rem 0 .4rem;
+    padding:.9rem;border:1.5px dashed var(--rule);border-radius:8px;background:var(--vellum)}
+  .az-btn{background:#fff;border:1px solid var(--rule);border-radius:6px;padding:.5rem .9rem;
+    font-family:var(--sans-eth);font-size:.85rem;color:var(--oxblood);cursor:pointer}
+  .az-btn:hover{background:var(--gold-soft);border-color:var(--gold)}
+  .para{margin:0 0 1rem;position:relative;padding:.35rem .5rem;border-radius:6px;
+    transition:background .13s}
+  .para:hover{background:var(--gold-soft)}
+  .para-flash{animation:paraFlash 2s ease-out}
+  @keyframes paraFlash{0%{background:#fff3c4;box-shadow:0 0 0 2px var(--gold)}
+    100%{background:transparent;box-shadow:none}}
+  /* inline tags */
+  .ent{border-bottom:1.5px dotted; cursor:default;padding:0 1px}
+  .ent-person{border-color:var(--oxblood);color:var(--oxblood)}
+  .ent-place{border-color:var(--indigo);color:var(--indigo)}
+  .ent-org{border-color:var(--gold);color:#7d5e10}
+  .ent-date{border-color:#5a7d5a;color:#3f6b3a}
+  .ent-link{border-color:#3a5a8a;color:#2f4b7a}
+  .concept{border-bottom:1.5px dotted var(--green);color:var(--green);cursor:default}
+  /* hover detail tooltip */
+  .tag-tip{position:absolute;z-index:80;max-width:300px;background:var(--ink);color:var(--paper);
+    border-radius:8px;padding:.7rem .8rem;font-size:.82rem;line-height:1.5;
+    box-shadow:0 6px 22px var(--shadow);font-family:var(--sans-eth);display:none}
+  .tag-tip.show{display:block}
+  .tag-tip .tt-kind{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;
+    color:#cbb98a;margin-bottom:.2rem}
+  .tag-tip .tt-name{font-weight:600;color:#fff;margin-bottom:.3rem;font-family:var(--serif-eth)}
+  .tag-tip .tt-row{color:#e4dcc8;margin:.15rem 0}
+  .tag-tip .tt-row b{color:#cbb98a;font-weight:600}
+  .tag-tip a{color:#9ec5ff;word-break:break-all}
+  .tag-tip .tt-edit{margin-top:.5rem;background:var(--oxblood);color:#fff;border:none;
+    border-radius:5px;padding:.35rem .7rem;font-size:.8rem;cursor:pointer;font-family:var(--sans-eth)}
+  .tag-tip .tt-edit:hover{background:var(--oxblood-soft)}
+  .tag-tip .tt-empty{color:#b3a98f;font-style:italic}
+  .note-hist{display:block;font-size:.86rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--rule);padding-left:.7rem;margin:.6rem 0}
+  .note-hist[contenteditable]:focus{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+  figure.inline-fig{margin:.6rem 0;text-align:center;background:var(--vellum);
+    border:1px solid var(--rule);border-radius:6px;padding:.5rem;max-width:340px;position:relative}
+  figure.inline-fig img{max-width:100%;border-radius:4px}
+  figure.inline-fig .fig-missing{display:none;font-family:var(--sans-eth);font-size:.8rem;
+    color:var(--ink-soft);padding:1.4rem .8rem}
+  figure.inline-fig.img-missing{min-width:200px}
+  figure.inline-fig.img-missing .fig-missing{display:block}
+  figure.inline-fig figcaption{font-size:.78rem;color:var(--ink-soft);
+    font-family:var(--sans-eth);margin-top:.3rem}
+  figure.inline-fig .fig-tools{position:absolute;top:.35rem;right:.35rem;display:none;gap:.25rem}
+  figure.inline-fig:hover .fig-tools{display:flex}
+  figure.inline-fig .fig-tools button{background:rgba(20,16,10,.82);color:#fff;border:none;
+    border-radius:4px;width:28px;height:28px;cursor:pointer;font-size:.82rem;line-height:1}
+  figure.inline-fig .fig-tools button:hover{background:var(--oxblood)}
+  /* ---- photos gallery tab ---- */
+  .photos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:1rem;margin-top:.6rem}
+  .guide-wrap{background:var(--paper);border:1px solid var(--rule);border-radius:8px;
+    padding:1.2rem 1.6rem;box-shadow:0 1px 5px var(--shadow);max-width:760px;margin:.4rem auto}
+  .guide-wrap h2{color:var(--oxblood);margin:.2rem 0 .6rem}
+  .guide-wrap h3{color:var(--oxblood);margin:1.2rem 0 .3rem;font-size:1.05rem;
+    border-bottom:1px solid var(--rule);padding-bottom:.2rem}
+  .guide-wrap ul{margin:.3rem 0 .6rem;padding-left:1.2rem}
+  .guide-wrap li{margin:.25rem 0;line-height:1.5}
+  .photo-card{background:var(--paper);border:1px solid var(--rule);border-radius:8px;
+    overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 5px var(--shadow)}
+  .photo-card .ph-img{width:100%;height:160px;background:var(--vellum);
+    border-bottom:1px solid var(--rule);position:relative;display:flex;align-items:center;justify-content:center}
+  .photo-card .ph-img img{width:100%;height:100%;object-fit:contain}
+  .photo-card .ph-img .ph-missing{display:none;font-family:var(--sans-eth);font-size:.78rem;
+    color:var(--ink-soft);text-align:center;line-height:1.5}
+  .photo-card .ph-img.img-missing .ph-missing{display:block}
+  .photo-card .ph-body{padding:.6rem .7rem;display:flex;flex-direction:column;gap:.4rem;flex:1}
+  .photo-card .ph-name{font-family:var(--sans-eth);font-size:.78rem;color:var(--ink-soft);
+    word-break:break-all}
+  .photo-card .ph-desc{font-size:.86rem;color:var(--ink);line-height:1.5;flex:1}
+  .photo-card .ph-kind{align-self:flex-start;font-family:var(--sans-eth);font-size:.66rem;
+    text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--ink-soft);
+    padding:.1rem .45rem;border-radius:20px}
+  .photo-card .ph-acts{display:flex;gap:.4rem;margin-top:.2rem}
+  .photo-card .ph-acts button{flex:1;border:1px solid var(--rule);background:#fff;border-radius:5px;
+    padding:.35rem;font-family:var(--sans-eth);font-size:.78rem;cursor:pointer}
+  .photo-card .ph-acts .ph-edit:hover{background:var(--gold-soft);border-color:var(--gold)}
+  .photo-card .ph-acts .ph-del{color:#852a2a}
+  .photo-card .ph-acts .ph-del:hover{background:#f6e3df;border-color:#852a2a}
+  /* ---- thumbnail picker (insert photo) ---- */
+  .pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:.5rem;margin-top:.3rem}
+  .pick-thumb{display:flex;flex-direction:column;gap:.25rem;padding:.25rem;background:#fff;
+    border:1px solid var(--rule);border-radius:6px;cursor:pointer;font-family:var(--sans-eth)}
+  .pick-thumb:hover{border-color:var(--gold)}
+  .pick-thumb.chosen{border-color:var(--oxblood);box-shadow:0 0 0 2px var(--oxblood) inset}
+  .pick-thumb .pt-img{height:64px;background:var(--vellum) center/contain no-repeat;border-radius:4px}
+  .pick-thumb .pt-name{font-size:.66rem;color:var(--ink-soft);word-break:break-all;text-align:center}
+  .para-text{outline:none;border-radius:4px;display:block;padding:.1rem .2rem}
+  .para-text:focus{background:#fffdf7;box-shadow:0 0 0 2px var(--gold) inset}
+  .para-text[contenteditable]{cursor:text}
+  .hint{font-size:.78rem;color:var(--ink-soft);font-family:var(--sans-eth)}
+  /* ---- floating annotate toolbar ---- */
+  .anno-bar{position:absolute;z-index:60;background:var(--ink);color:#fff;border-radius:7px;
+    padding:.3rem;display:none;gap:.2rem;box-shadow:0 4px 16px var(--shadow);flex-wrap:wrap;max-width:330px}
+  .anno-bar.show{display:flex}
+  .anno-bar button{background:#3a342b;color:#fff;border:none;border-radius:4px;
+    padding:.32rem .5rem;font-size:.76rem;cursor:pointer;font-family:var(--sans-eth);white-space:nowrap}
+  .anno-bar button:hover{background:var(--oxblood)}
+  /* ---- right-click context menu ---- */
+  .ctx-menu{position:absolute;z-index:65;background:var(--ink);border-radius:7px;padding:.3rem;
+    display:none;box-shadow:0 4px 16px var(--shadow)}
+  .ctx-menu.show{display:block}
+  .ctx-menu button{display:block;width:100%;text-align:left;background:#3a342b;color:#fff;border:none;border-radius:4px;
+    padding:.45rem .7rem;font-size:.82rem;cursor:pointer;font-family:var(--sans-eth);white-space:nowrap;margin:.12rem 0}
+  .ctx-menu button:hover{background:var(--oxblood)}
+  .ctx-menu button.ctx-danger{background:#6b2424}
+  .ctx-menu button.ctx-danger:hover{background:#852a2a}
+  /* ---- modal ---- */
+  .modal-bg{position:fixed;inset:0;background:rgba(20,16,10,.55);z-index:100;display:none;
+    align-items:center;justify-content:center;padding:1rem}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--paper);border-radius:10px;max-width:540px;width:100%;
+    max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+  .modal-h{padding:1rem 1.3rem;border-bottom:1px solid var(--rule);display:flex;
+    align-items:center;gap:.6rem}
+  .modal-h h3{margin:0;font-size:1.05rem;color:var(--oxblood)}
+  .modal-h .x{margin-left:auto;cursor:pointer;font-size:1.3rem;color:var(--ink-soft);
+    background:none;border:none}
+  .modal-body{padding:1.1rem 1.3rem}
+  .modal-foot{padding:.9rem 1.3rem;border-top:1px solid var(--rule);display:flex;
+    gap:.6rem;justify-content:flex-end}
+  .field{margin-bottom:.9rem}
+  .field label{display:block;font-size:.82rem;color:var(--ink-soft);margin-bottom:.25rem;
+    font-family:var(--sans-eth)}
+  .field input,.field select,.field textarea{width:100%;padding:.5rem .6rem;border:1px solid var(--rule);
+    border-radius:5px;font-family:var(--serif-eth);font-size:.95rem;background:#fffdf7;color:var(--ink)}
+  .field textarea{min-height:4rem;resize:vertical;line-height:1.6}
+  .field .sel-text{background:var(--gold-soft);padding:.3rem .5rem;border-radius:4px;
+    font-weight:600;color:var(--oxblood)}
+  .radio-row{display:flex;gap:1rem;margin:.3rem 0 .6rem;font-family:var(--sans-eth);font-size:.88rem}
+  .radio-row label{display:flex;align-items:center;gap:.3rem;cursor:pointer}
+  #map{width:100%;height:260px;border-radius:6px;border:1px solid var(--rule);background:var(--vellum-deep);
+    display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:.85rem;
+    text-align:center;font-family:var(--sans-eth)}
+  .coord-readout{font-family:var(--serif-lat);font-size:.85rem;color:var(--ink);margin-top:.4rem}
+  /* ---- toast ---- */
+  .toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%) translateY(2rem);
+    background:var(--ink);color:#fff;padding:.7rem 1.2rem;border-radius:7px;font-size:.88rem;
+    font-family:var(--sans-eth);opacity:0;transition:.3s;z-index:200;box-shadow:0 6px 20px var(--shadow)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--oxblood)}
+  .legend{font-size:.78rem;color:var(--ink-soft);font-family:var(--sans-eth);
+    display:flex;gap:1rem;flex-wrap:wrap;margin:.8rem 0 0;padding:.6rem .9rem;
+    background:var(--paper);border:1px solid var(--rule);border-radius:6px}
+  .legend span{display:inline-flex;align-items:center;gap:.3rem}
+  .legend i{width:1rem;height:0;border-bottom:1.5px dotted;display:inline-block}
+  .hidden{display:none!important}
+  /* ---- tabs ---- */
+  .tabs{display:flex;gap:.3rem;margin-left:1rem}
+  .tab{font-family:var(--sans-eth);font-size:.84rem;background:transparent;color:#cbb98a;
+    border:1px solid transparent;padding:.4rem .8rem;border-radius:6px;cursor:pointer;transition:.13s}
+  .tab:hover{background:#3a342b;color:var(--paper)}
+  .tab.is-active{background:var(--paper);color:var(--ink);font-weight:600}
+  /* ---- review ---- */
+  .rev-loaders{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+  .rev-drop{flex:1;min-width:240px;border:2px dashed var(--rule);border-radius:8px;
+    padding:1.1rem;text-align:center;background:var(--paper);cursor:pointer;transition:.15s}
+  .rev-drop:hover,.rev-drop.over{border-color:var(--gold);background:var(--gold-soft)}
+  .rev-drop.loaded{border-style:solid;border-color:var(--green)}
+  .rl-label{font-family:var(--sans-eth);font-size:.9rem;color:var(--ink);margin-bottom:.3rem;font-weight:600}
+  .rl-name{font-size:.82rem;color:var(--ink-soft);font-family:var(--serif-lat);word-break:break-all}
+  .rev-actions{display:flex;gap:.7rem;align-items:center;flex-wrap:wrap;margin-bottom:1.2rem}
+  .rev-summary{font-family:var(--sans-eth);font-size:.86rem;color:var(--ink-soft)}
+  .change{background:var(--paper);border:1px solid var(--rule);border-radius:8px;
+    padding:.9rem 1.1rem;margin-bottom:.8rem;box-shadow:0 1px 5px var(--shadow)}
+  .change.approved{border-color:var(--green);background:#f0f4ea}
+  .change-h{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap}
+  .change-n{font-family:var(--sans-eth);font-weight:700;color:var(--oxblood);font-size:.92rem}
+  .change-kind{font-family:var(--sans-eth);font-size:.7rem;text-transform:uppercase;
+    letter-spacing:.04em;color:#fff;background:var(--ink-soft);padding:.12rem .5rem;border-radius:20px}
+  .change-kind.add{background:var(--green)}
+  .change-kind.text{background:var(--indigo)}
+  .change-kind.tagk{background:var(--gold);color:#3a2e08}
+  .change-kind.entk{background:var(--oxblood)}
+  .inbox-sec{margin-top:.8rem;border-top:1px solid var(--rule);padding-top:.4rem}
+  .inbox-sum{cursor:pointer;list-style:none;font-family:var(--sans-eth);font-weight:700;
+    font-size:1rem;color:var(--oxblood);padding:.5rem .2rem;user-select:none;
+    display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+  .inbox-sum::-webkit-details-marker{display:none}
+  .inbox-sum::before{content:'▸';display:inline-block;transition:transform .15s;color:var(--ink-soft)}
+  details[open]>.inbox-sum::before{transform:rotate(90deg)}
+  .inbox-sum:hover{color:var(--gold-deep,var(--oxblood))}
+  .change-body{font-size:.92rem;line-height:1.6;color:var(--ink)}
+  .change-body .old{background:#f6e3df;text-decoration:line-through;color:#8a4438;
+    padding:0 3px;border-radius:3px}
+  .change-body .new{background:#e3efdd;color:#2f5a2a;padding:0 3px;border-radius:3px}
+  .change-body .q{color:var(--oxblood);font-weight:600}
+  .change-body .para-full{white-space:pre-wrap;word-break:break-word;
+    background:#fbf8f1;border:1px solid var(--line,#e7e0cf);border-radius:6px;
+    padding:.55rem .7rem;margin:.15rem 0}
+  .change-foot{display:flex;gap:.5rem;align-items:center;margin-top:.7rem;flex-wrap:wrap}
+  .change-foot .btn{font-size:.78rem;padding:.32rem .7rem}
+  .approve-btn.on{background:var(--green);color:#fff;border-color:var(--green)}
+  .cmt-input{flex:1;min-width:180px;padding:.4rem .6rem;border:1px solid var(--rule);
+    border-radius:5px;font-family:var(--serif-eth);font-size:.88rem;background:#fffdf7}
+  .cmt-saved{font-size:.78rem;color:var(--green);font-family:var(--sans-eth)}
+  .rev-empty{text-align:center;color:var(--ink-soft);padding:2rem;font-family:var(--sans-eth)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>የቤተሰብ ሰነድ አርታኢ</h1>
+  <span class="sub">TEI Editor · ደረጃ ፪</span>
+  <div class="tabs" id="tabs">
+    <button class="tab is-active" id="tabEdit" data-tab="edit">✎ አርትዕ · Edit</button>
+    <button class="tab" id="tabPhotos" data-tab="photos">📷 ፎቶዎች · Photos</button>
+    <button class="tab" id="tabReview" data-tab="review">📥 መልክት · Notification</button>
+    <button class="tab" id="tabGuide" data-tab="guide">📖 መመሪያ · Guide</button>
+  </div>
+  <span class="spacer"></span>
+  <span id="editTools">
+    <button class="btn btn-primary" id="downloadBtn" disabled="disabled">⬇ አውርድ</button>
+  </span>
+</div>
+
+<div class="wrap">
+  <!-- LOAD SCREEN -->
+  <div id="loadScreen">
+    <div class="intro">
+      <h2>እንኳን ደህና መጡ</h2>
+      <p class="am">ይህ መሣሪያ የቤተሰቡን ሰነድ በቀላሉ እንዲያስተካክሉ፣ ጽሑፍ እንዲሰይሙ (annotate)፣ ፎቶ እንዲጨምሩ ያስችልዎታል። TEI ወይም ኮድ ማወቅ አያስፈልግዎትም።</p>
+      <p>Load your TEI file below. Select any text to tag it (person, place, concept…), add photos with descriptions and map coordinates, then download the edited TEI. No XML knowledge needed.</p>
+    </div>
+    <div id="ghHomeLogin" class="hidden" style="text-align:center;margin:1.6rem 0">
+      <button class="btn btn-primary" id="ghHomeLoginBtn" style="font-size:1.05rem;padding:.75rem 1.6rem">በGitHub ይግቡ · Sign in with GitHub</button>
+    </div>
+    <div class="drop hidden" id="drop">
+      <div class="big">የTEI ፋይል እዚህ ይጫኑ ወይም ይጎትቱ</div>
+      <div class="small">Click to choose, or drag your <code>.xml</code> file here</div>
+      <input type="file" id="fileInput" accept=".xml" class="hidden"/>
+    </div>
+  </div>
+
+  <!-- EDITOR -->
+  <div id="editor" class="hidden">
+    <div class="legend">
+      <span><i style="border-color:var(--oxblood)"></i> ሰው · Person</span>
+      <span><i style="border-color:var(--indigo)"></i> ቦታ · Place</span>
+      <span><i style="border-color:#7d5e10"></i> ድርጅት · Org</span>
+      <span><i style="border-color:var(--green)"></i> ጽንሰ-ሐሳብ · Concept</span>
+      <span style="color:var(--ink-soft)">— ጽሑፉን በቀጥታ ያርትዑ · type to edit · ጽሑፍ ይምረጡ ለመሰየም · select to annotate · right-click ለፎቶ · right-click for photo</span>
+    </div>
+    <div class="doc" id="doc"></div>
+  </div>
+
+  <!-- PHOTOS PANEL (gallery of every image in the document) -->
+  <div id="photosPanel" class="hidden">
+    <div class="intro" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+      <div>
+        <h2>📷 ፎቶዎች · Photos</h2>
+        <p class="am" style="margin:.2rem 0">በሰነዱ ውስጥ ያሉ ሁሉም ምስሎች። ከፋይል አዲስ ምስል ይጨምሩ፣ መግለጫ ያስተካክሉ ወይም ያስወግዱ።</p>
+      </div>
+      <button class="btn btn-primary" id="photosAddBtn">➕ ከፋይል ፎቶ ጨምር · Add photo from file</button>
+    </div>
+    <div id="photosGrid" class="photos-grid"></div>
+  </div>
+
+  <!-- REVIEW PANEL -->
+  <div id="review" class="hidden">
+    <!-- The GitHub review queue (#ghInbox) is injected here by stage3.js.
+         Each pending request shows its per-paragraph changes with a comment
+         box per paragraph and an approve button. -->
+  </div>
+
+  <!-- GUIDE PANEL (how to edit) -->
+  <div id="guide" class="hidden">
+    <div class="guide-wrap">
+      <h2>📖 የአርትዖት መመሪያ · Editing Guide</h2>
+      <p class="am">ይህ ሰነድ የቤተሰብ ታሪክን በጋራ ለማረም ይረዳል። ከታች ያሉትን ቀላል ደረጃዎች ይከተሉ።</p>
+
+      <h3>1. መግባት · Sign in</h3>
+      <ul>
+        <li class="am">በ«በGitHub ይግቡ» በመጫን ይግቡ። ከገቡ በኋላ ሰነዱ በራስ-ሰር ይከፈታል።</li>
+        <li>Click <b>Sign in</b>. The document loads automatically into your own working copy.</li>
+      </ul>
+
+      <h3>2. ጽሑፍ ማረም · Edit text</h3>
+      <ul>
+        <li class="am">በማንኛውም አንቀጽ ላይ ጠቅ አድርገው በቀጥታ ይተይቡ። ርዕሱንም እንዲሁ ማረም ይችላሉ።</li>
+        <li>Click directly on any paragraph (or the title) and type to edit it in place.</li>
+      </ul>
+
+      <h3>3. አዲስ ይዘት መጨመር · Add content</h3>
+      <ul>
+        <li class="am">በባዶ ቦታ ላይ <b>right-click</b> ያድርጉ → «አዲስ አንቀጽ ጨምር» ወይም «አዲስ ርዕስ ጨምር»። አዲሱ ይዘት ጠቅ ባደረጉበት ቦታ ይገባል።</li>
+        <li><b>Right-click</b> on empty space to add a new paragraph or heading — it is inserted exactly where you clicked.</li>
+        <li class="am">በአንቀጽ ላይ right-click ሲያደርጉ ከታች አንቀጽ መጨመር፣ ንዑስ ርዕስ መጨመር ወይም መሰረዝ ይችላሉ።</li>
+        <li>Right-click a paragraph or heading for options: add below, add sub-heading, or delete.</li>
+      </ul>
+
+      <h3>4. ፎቶዎች · Photos</h3>
+      <ul>
+        <li class="am">በ«📷 ፎቶዎች» ትር ሁሉንም ምስሎች ያያሉ። «ከፋይል ፎቶ ጨምር» በመጫን አዲስ ምስል ይጨምሩ።</li>
+        <li>Open the <b>Photos</b> tab to see every image. Use <b>Add photo from file</b> to upload a new one.</li>
+        <li class="am">በአንቀጽ ላይ right-click → «ፎቶ እዚህ አስገባ» በማድረግ ምስል በጽሑፍ ውስጥ ማስገባት ይችላሉ።</li>
+        <li>To place a photo inside the text, right-click a paragraph → <b>Insert photo</b>.</li>
+      </ul>
+
+      <h3>5. ማስቀመጥና መላክ · Save &amp; submit</h3>
+      <ul>
+        <li class="am"><b>💾 አስቀምጥ</b> — ለውጦችዎን በራስዎ ቅርንጫፍ ያስቀምጣል (ለግምገማ አይልክም)።</li>
+        <li><b>Save</b> stores your changes on your own branch without sending them for review.</li>
+        <li class="am"><b>ለግምገማ ላክ</b> — ሥራዎን በሌላ ሰው ለማስገምገም ይላካል።</li>
+        <li><b>Submit for review</b> sends your work to an admin for approval.</li>
+        <li class="am"><b>⬇ አውርድ</b> — የተስተካከለውን TEI ፋይል ወደ ኮምፒውተርዎ ያወርዳል።</li>
+        <li><b>Download</b> saves the edited TEI file to your computer.</li>
+      </ul>
+
+      <h3>6. መልክት · Notifications</h3>
+      <ul>
+        <li class="am">በ«📥 መልክት» ስር ለግምገማ የተመደቡልዎትን ጥያቄዎችና የደረሱዎትን አስተያየቶች ያያሉ።</li>
+        <li>The <b>Notification</b> tab shows reviews assigned to you and comments you received.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- floating annotate toolbar -->
+<div class="anno-bar" id="annoBar"></div>
+
+<!-- hover detail tooltip for tagged text -->
+<div class="tag-tip" id="tagTip"></div>
+
+<!-- right-click context menu (photos, headings, paragraphs, images) -->
+<div class="ctx-menu" id="ctxMenu"></div>
+
+<!-- hidden file input for choosing an image -->
+<input type="file" id="photoFile" accept="image/*" class="hidden"/>
+<!-- hidden file input for replacing an existing image -->
+<input type="file" id="photoReplaceFile" accept="image/*" class="hidden"/>
+
+<!-- modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-h"><h3 id="modalTitle"></h3><button class="x" id="modalX">×</button></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot" id="modalFoot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!--
+  GOOGLE MAPS: to enable the map coordinate-picker, paste your Google Maps
+  JavaScript API key below in place of YOUR_API_KEY, and uncomment the script tag.
+  Restrict the key to your domain in the Google Cloud console.
+-->
+<!--
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMapReady" async defer></script>
+-->
+
+<script>
+"use strict";
+/* =========================================================================
+   STAGE 1 — TEI annotation editor (no GitHub yet)
+   Loads a TEI file, renders chapters/sections/paragraphs editably,
+   lets the user annotate selections, add photos, manage glossary,
+   and download the edited TEI. Per-element editing protects existing tags.
+   ========================================================================= */
+
+var STATE = {
+  xmlDoc: null,          // parsed TEI DOM
+  fileName: 'welde-mariam-family-history-tei.xml',
+  NS: null,
+  persons: [], places: [], orgs: [], glossary: [],
+  pendingImages: {},     // filename -> dataURL (for download bundle note)
+};
+
+/* TEI uses a default namespace; helper to query within it */
+function qsa(root, sel){ return Array.prototype.slice.call(root.querySelectorAll(sel)); }
+function tagName(el){ return el.localName || el.nodeName.replace(/^.*:/,''); }
+
+/* ---------- file loading ---------- */
+var fileInput = document.getElementById('fileInput');
+var drop = document.getElementById('drop');
+drop.addEventListener('click', function(){ fileInput.click(); });
+drop.addEventListener('dragover', function(e){ e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', function(){ drop.classList.remove('over'); });
+drop.addEventListener('drop', function(e){
+  e.preventDefault(); drop.classList.remove('over');
+  if(e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', function(){ if(fileInput.files[0]) readFile(fileInput.files[0]); });
+
+function readFile(file){
+  STATE.fileName = file.name || STATE.fileName;
+  var r = new FileReader();
+  r.onload = function(){ parseTEI(r.result); };
+  r.onerror = function(){ toast('ፋይሉን ማንበብ አልተቻለም', true); };
+  r.readAsText(file, 'utf-8');
+}
+
+function parseTEI(text){
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(text, 'application/xml');
+  var err = doc.querySelector('parsererror');
+  if(err){ toast('የXML ስህተት ተገኝቷል — ፋይሉ የተበላሸ ሊሆን ይችላል', true); return; }
+  STATE.xmlDoc = doc;
+  indexEntities();
+  renderDoc();
+  document.getElementById('loadScreen').classList.add('hidden');
+  document.getElementById('editor').classList.remove('hidden');
+  document.getElementById('downloadBtn').disabled = false;
+  toast('ሰነዱ ተጫነ · loaded');
+}
+
+/* Scroll to the Nth body paragraph (1-based) in the editor and flash it.
+   Switches to the Edit tab first. Returns true if found. */
+function gotoParagraph(pnum){
+  if(!pnum || pnum<1) return false;
+  var editTab=document.getElementById('tabEdit');
+  if(editTab) editTab.click();
+  var paras=qsa(document.getElementById('doc'),'.para');
+  var target=paras[pnum-1];
+  if(!target){ toast('አንቀጹ አልተገኘም · paragraph not found', true); return false; }
+  target.scrollIntoView({behavior:'smooth', block:'center'});
+  target.classList.add('para-flash');
+  setTimeout(function(){ target.classList.remove('para-flash'); }, 2000);
+  return true;
+}
+window.gotoParagraph = gotoParagraph;
+
+/* ---------- index entities & glossary from the TEI ---------- */
+function indexEntities(){
+  var d = STATE.xmlDoc;
+  STATE.persons = qsa(d,'person').map(function(p){
+    return { id: p.getAttribute('xml:id'),
+             name: textOf(p.querySelector('persName')) };
+  }).filter(function(x){ return x.id; });
+  STATE.places = qsa(d,'place').map(function(p){
+    return { id: p.getAttribute('xml:id'),
+             name: textOf(p.querySelector('placeName')) };
+  }).filter(function(x){ return x.id; });
+  STATE.orgs = qsa(d,'org').map(function(o){
+    return { id: o.getAttribute('xml:id'),
+             name: textOf(o.querySelector('orgName')) };
+  }).filter(function(x){ return x.id; });
+  STATE.glossary = qsa(d,'item').filter(function(it){
+    return (it.getAttribute('xml:id')||'').indexOf('g_')===0;
+  }).map(function(it){
+    return { id: it.getAttribute('xml:id'),
+             term: textOf(it.querySelector('term')),
+             forms: (it.getAttribute('n')||'').split('|').map(function(s){return s.trim();}).filter(Boolean) };
+  });
+}
+function textOf(el){ return el ? (el.textContent||'').trim() : ''; }
+
+/* Read whatever we already know about an entity record from the TEI. */
+function getEntityDetails(kind, id){
+  var rec = qsa(STATE.xmlDoc, kind).find(function(e){ return e.getAttribute('xml:id')===id; });
+  if(!rec) return null;
+  var nameTag = kind==='person'?'persName' : kind==='place'?'placeName' : 'orgName';
+  var d = { id:id, name:textOf(rec.querySelector(nameTag)) };
+  var sex=rec.querySelector('sex'); if(sex) d.sex=textOf(sex);
+  var geo=rec.querySelector('geo'); if(geo) d.geo=textOf(geo);
+  var note=rec.querySelector('note'); if(note) d.note=textOf(note);
+  var idno=rec.querySelector('idno'); if(idno) d.src=textOf(idno);
+  return d;
+}
+
+/* Update an existing entity record's note / source / sex / geo in place. */
+function updateEntity(kind, id, extra){
+  var doc=STATE.xmlDoc, ns=doc.documentElement.namespaceURI;
+  var rec=qsa(doc,kind).find(function(e){ return e.getAttribute('xml:id')===id; });
+  if(!rec){ toast('መዝገቡ አልተገኘም', true); return; }
+  function setChild(tag, value, attrs){
+    var el=rec.querySelector(tag);
+    if(value){
+      if(!el){ el=doc.createElementNS(ns,tag); Object.keys(attrs||{}).forEach(function(k){el.setAttribute(k,attrs[k]);}); rec.appendChild(el); }
+      el.textContent=value;
+    } else if(el){ el.parentNode.removeChild(el); }
+  }
+  if(kind==='person' && typeof extra.sex!=='undefined') setChild('sex', extra.sex);
+  if(kind==='place' && extra.geo){
+    var loc=rec.querySelector('location'); if(!loc){ loc=doc.createElementNS(ns,'location'); rec.appendChild(loc); }
+    var g=loc.querySelector('geo'); if(!g){ g=doc.createElementNS(ns,'geo'); loc.appendChild(g); }
+    g.textContent=extra.geo;
+  }
+  if(typeof extra.note!=='undefined') setChild('note', extra.note);
+  if(typeof extra.src!=='undefined') setChild('idno', extra.src, {type:'URL'});
+  indexEntities();
+}
+
+/* Lenient URL normalizer: accepts example.com, www.x.org, https://… ;
+   returns '' if clearly not a URL. Adds https:// when missing. */
+function normalizeUrl(raw){
+  var s=(raw||'').trim();
+  if(!s) return '';
+  if(/^https?:\/\//i.test(s)) return s;
+  // must look like a domain (has a dot, no spaces)
+  if(/\s/.test(s) || s.indexOf('.')<0) return null; // invalid
+  return 'https://'+s;
+}
+
+/* ---------- render the document for reading/editing ---------- */
+var NODE_SEQ = 0;
+var NODE_MAP = {};   // domNodeId -> xml node (for headings + figures)
+var NOTE_SEQ = 0;
+var NOTE_MAP = {};   // domNodeId -> xml <note> node (editable history notes)
+var TITLE_NODE = null; // the <title> xml node currently shown/edited
+function regNode(xmlNode){ var id='node_'+(NODE_SEQ++); NODE_MAP[id]=xmlNode; return id; }
+function mapNode(el, xmlNode){ var id=regNode(xmlNode); el.setAttribute('data-node', id); return id; }
+
+function renderDoc(){
+  PARA_MAP = {}; NODE_MAP = {}; NOTE_MAP = {};
+  var d = STATE.xmlDoc, doc = document.getElementById('doc');
+  doc.innerHTML = '';
+  // title (editable)
+  var title = d.querySelector('titleStmt > title');
+  TITLE_NODE = title || null;
+  if(title){
+    var h=document.createElement('div'); h.className='doc-title'; h.id='docTitle';
+    h.setAttribute('contenteditable','true'); h.spellcheck=false;
+    h.textContent=textOf(title); doc.appendChild(h);
+  }
+  // body content (chapters / sections / paragraphs)
+  var body = d.querySelector('body') || d.querySelector('text') || d.documentElement;
+  if(body){
+    childElements(body).forEach(function(node){
+      var t=tagName(node);
+      if(t==='div') doc.appendChild(renderDiv(node, 1));
+      else if(t==='p') doc.appendChild(renderPara(node));
+      else if(t==='note') doc.appendChild(renderNote(node));
+    });
+  }
+}
+function directChild(parent,name){
+  var kids=childElements(parent);
+  for(var i=0;i<kids.length;i++) if(tagName(kids[i])===name) return kids[i];
+  return null;
+}
+function childElements(parent){
+  return Array.prototype.filter.call(parent.childNodes, function(n){ return n.nodeType===1; });
+}
+/* Heading class from the div's TEI type (falling back to nesting depth). */
+function headClassFor(divNode, depth){
+  var ty=(divNode.getAttribute('type')||'').toLowerCase();
+  if(ty==='chapter') return 'chapter-h';
+  if(ty==='section') return 'section-h';
+  if(ty==='subsection') return 'subsection-h';
+  if(ty==='subsubsection'||ty==='subsubsec') return 'subsubsection-h';
+  return depth<=1?'chapter-h':depth===2?'section-h':depth===3?'subsection-h':'subsubsection-h';
+}
+/* Recursively render a <div> (chapter / section / subsection / …). */
+function renderDiv(divNode, depth){
+  var ty=(divNode.getAttribute('type')||'').toLowerCase();
+  var wrap=document.createElement('div');
+  wrap.className=(ty==='chapter'||depth<=1)?'chapter':'section';
+  var head=directChild(divNode,'head');
+  if(head){
+    var hh=document.createElement('div');
+    hh.className=headClassFor(divNode, depth);
+    hh.textContent=textOf(head);
+    mapNode(hh, head);
+    wrap.appendChild(hh);
+  }
+  childElements(divNode).forEach(function(node){
+    var t=tagName(node);
+    if(t==='p') wrap.appendChild(renderPara(node));
+    else if(t==='note') wrap.appendChild(renderNote(node));
+    else if(t==='div') wrap.appendChild(renderDiv(node, depth+1));
+  });
+  return wrap;
+}
+/* The "+ add" footer zone at the end of the document. */
+function appendAddZone(doc){
+  var z=document.createElement('div'); z.className='add-zone';
+  z.innerHTML=
+    '<button type="button" class="az-btn" data-az="head">📑 ርዕስ ጨምር · Add heading</button>'+
+    '<button type="button" class="az-btn" data-az="para">➕ አንቀጽ ጨምር · Add paragraph</button>';
+  doc.appendChild(z);
+}
+function renderNote(note){
+  var id='note_'+(NOTE_SEQ++);
+  NOTE_MAP[id]=note;
+  var el=document.createElement('div'); el.className='note-hist'; el.id=id;
+  el.setAttribute('contenteditable','true'); el.spellcheck=false;
+  el.textContent=textOf(note);
+  return el;
+}
+
+/* Render a <p> as editable HTML, preserving inline tags visually.
+   We keep a reference to the source XML node so edits map back precisely. */
+var PARA_SEQ = 0;
+var PARA_MAP = {}; // domId -> xml <p> node
+function renderPara(pNode){
+  var id = 'para_'+(PARA_SEQ++);
+  PARA_MAP[id] = pNode;
+  var el=document.createElement('div'); el.className='para'; el.id=id;
+  var span=document.createElement('span'); span.className='para-text';
+  var hasFigure = pNode.getElementsByTagName('figure').length>0;
+  if(!hasFigure){ span.setAttribute('contenteditable','true'); span.spellcheck=false; }
+  span.innerHTML = inlineToHtml(pNode);
+  el.appendChild(span);
+  return el;
+}
+
+/* Convert a TEI <p>'s children into display HTML with styled inline tags.
+   Each tag span carries data-* attributes so a hover tooltip can resolve and
+   show the recorded details, and an edit button can reopen the right editor. */
+function inlineToHtml(node){
+  var out='';
+  Array.prototype.forEach.call(node.childNodes, function(n){
+    if(n.nodeType===3){ out += escapeHtml(n.nodeValue); return; }
+    if(n.nodeType!==1){ return; }
+    var t=tagName(n), inner=inlineToHtml(n);
+    var ref=n.getAttribute('ref')||'';
+    var target=n.getAttribute('target')||'';
+    var whenC=n.getAttribute('when-custom')||'';
+    var nameType=n.getAttribute('type')||'';
+    var txt=escapeAttr((n.textContent||'').trim());
+    function d(kind){ return ' data-tag="'+kind+'" data-ref="'+escapeAttr(ref)+'" data-target="'+escapeAttr(target)+'" data-when="'+escapeAttr(whenC)+'" data-type="'+escapeAttr(nameType)+'" data-text="'+txt+'"'; }
+    if(t==='persName') out+='<span class="ent ent-person"'+d('person')+'>'+inner+'</span>';
+    else if(t==='placeName') out+='<span class="ent ent-place"'+d('place')+'>'+inner+'</span>';
+    else if(t==='orgName') out+='<span class="ent ent-org"'+d('org')+'>'+inner+'</span>';
+    else if(t==='date') out+='<span class="ent ent-date"'+d('date')+'>'+inner+'</span>';
+    else if(t==='ref') out+='<span class="ent ent-link"'+d('ref')+'>'+inner+'</span>';
+    else if(t==='term'||t==='occupation'||t==='education'||t==='name'||t==='roleName'||t==='addName')
+      out+='<span class="concept"'+d(t==='occupation'?'occupation':'term')+'>'+inner+'</span>';
+    else if(t==='figure') out+=renderInlineFigure(n);
+    else out+=inner;
+  });
+  return out;
+}
+function renderInlineFigure(fig){
+  var id=regNode(fig);
+  var g=fig.querySelector('graphic'), cap=fig.querySelector('figDesc');
+  var url=g?g.getAttribute('url'):'';
+  var src = photoSrc(url);
+  return '<figure class="inline-fig" data-node="'+id+'">'+
+    '<div class="fig-tools">'+
+      '<button type="button" data-fig-act="update" title="ምስል ቀይር · update">✎</button>'+
+      '<button type="button" data-fig-act="remove" title="ምስል አስወግድ · remove">🗑</button>'+
+    '</div>'+
+    '<img src="'+escapeAttr(src)+'" alt="" loading="lazy" onerror="window.__imgErr(this)"/>'+
+    '<span class="fig-missing">📷 ፋይል የለም · file not uploaded</span>'+
+    (cap?'<figcaption>'+escapeHtml(textOf(cap))+'</figcaption>':'')+'</figure>';
+}
+
+/* Resolve the best display source for a photo referenced in the TEI:
+   1) a just-uploaded image still in memory (data URL), keyed by its url;
+   2) an absolute http(s) url, used as-is;
+   3) otherwise stream it from the user's branch through the photo proxy. */
+function photoSrc(url){
+  if(!url) return '';
+  if(STATE.pendingImages[url]) return STATE.pendingImages[url];
+  if(/^(https?:|data:)/i.test(url)) return url;
+  return '/api/repo/photo?path='+encodeURIComponent(url);
+}
+
+/* ---------- selection → floating annotate toolbar ---------- */
+var annoBar=document.getElementById('annoBar');
+var lastSelection=null;
+document.addEventListener('mouseup', function(){
+  setTimeout(handleSelection, 10);
+});
+function handleSelection(){
+  var sel=window.getSelection();
+  if(!sel||sel.isCollapsed||!sel.toString().trim()){ annoBar.classList.remove('show'); return; }
+  // selection must be inside a .para-text (and not while editing)
+  var anchorPara = nodeParaText(sel.anchorNode);
+  var focusPara = nodeParaText(sel.focusNode);
+  if(!anchorPara || anchorPara!==focusPara){ annoBar.classList.remove('show'); return; }
+  if(anchorPara.closest('.para').classList.contains('editing')){ annoBar.classList.remove('show'); return; }
+  lastSelection = { text: sel.toString(), paraEl: anchorPara.closest('.para') };
+  showAnnoBar(sel);
+}
+function nodeParaText(node){
+  while(node && node.nodeType!==1) node=node.parentNode;
+  if(!node) return null;
+  return node.closest ? node.closest('.para-text') : null;
+}
+
+/* ----- right-click context menu: photos, headings, paragraphs, images ----- */
+var ctxMenu=document.getElementById('ctxMenu');
+var ctxTargetPara=null;            // the .para where a new inline photo would go
+var photoFileInput=document.getElementById('photoFile');
+var photoReplaceFile=document.getElementById('photoReplaceFile');
+
+document.getElementById('doc').addEventListener('contextmenu', function(e){
+  if(!STATE.xmlDoc) return;
+  var items=buildCtxItems(e);
+  if(!items.length) return;
+  e.preventDefault();              // replace the browser's default menu
+  ctxMenu.innerHTML='';
+  items.forEach(function(it){
+    var b=document.createElement('button');
+    b.textContent=it.label;
+    if(it.danger) b.className='ctx-danger';
+    b.addEventListener('click', function(){ ctxMenu.classList.remove('show'); it.act(); });
+    ctxMenu.appendChild(b);
+  });
+  ctxMenu.classList.add('show');
+  ctxMenu.style.left=(window.scrollX+e.clientX)+'px';
+  ctxMenu.style.top=(window.scrollY+e.clientY)+'px';
+});
+// hide the context menu on any click elsewhere
+document.addEventListener('click', function(e){
+  if(!ctxMenu.contains(e.target)) ctxMenu.classList.remove('show');
+});
+document.addEventListener('scroll', function(){ ctxMenu.classList.remove('show'); }, true);
+
+/* left-clicks inside the document: "+ add" footer buttons and figure tools */
+document.getElementById('doc').addEventListener('click', function(e){
+  var az=e.target.closest && e.target.closest('.az-btn');
+  if(az){
+    if(az.getAttribute('data-az')==='head') addHeadingFlow(null);
+    else addParagraphAtEnd();
+    return;
+  }
+  var ft=e.target.closest && e.target.closest('[data-fig-act]');
+  if(ft){
+    var figEl=ft.closest('figure.inline-fig');
+    if(figEl){
+      if(ft.getAttribute('data-fig-act')==='update') updateImage(figEl);
+      else removeImage(figEl);
+    }
+  }
+});
+
+/* Decide which context-menu items to show based on what was right-clicked. */
+function buildCtxItems(e){
+  var items=[];
+  var titleEl= e.target.closest ? e.target.closest('.doc-title') : null;
+  var figEl  = e.target.closest ? e.target.closest('figure.inline-fig') : null;
+  var headEl = e.target.closest ? e.target.closest('.chapter-h,.section-h,.subsection-h,.subsubsection-h') : null;
+  var paraEl = e.target.closest ? e.target.closest('.para') : null;
+  ctxTargetPara = paraEl || null;
+
+  if(titleEl){
+    items.push({label:'✎ ርዕስ አስተካክል · Edit title', act:function(){ titleEl.focus(); }});
+    return items;
+  }
+  if(figEl){
+    items.push({label:'🖼 ምስል ቀይር · Update image', act:function(){ updateImage(figEl); }});
+    items.push({label:'🗑 ምስል አስወግድ · Remove image', danger:true, act:function(){ removeImage(figEl); }});
+    return items;
+  }
+  if(headEl){
+    items.push({label:'✎ ርዕስ አስተካክል · Edit heading', act:function(){ editHeading(headEl); }});
+    items.push({label:'➕ ንዑስ ርዕስ ጨምር · Add sub-heading', act:function(){ addHeadingUnder(headEl); }});
+    items.push({label:'🗑 ርዕስ አስወግድ · Delete heading', danger:true, act:function(){ deleteHeading(headEl); }});
+    return items;
+  }
+  if(paraEl){
+    items.push({label:'📷 ፎቶ እዚህ አስገባ · Insert photo', act:function(){ galleryPickerModal(paraEl); }});
+    items.push({label:'➕ አንቀጽ ከታች ጨምር · Add paragraph below', act:function(){ addParagraphAfter(PARA_MAP[paraEl.id]); }});
+    items.push({label:'📑 ርዕስ ጨምር · Add heading', act:function(){ addHeadingFlow(PARA_MAP[paraEl.id]); }});
+    items.push({label:'🗑 አንቀጽ አስወግድ · Delete paragraph', danger:true, act:function(){ deleteParagraph(paraEl); }});
+    return items;
+  }
+  // blank space inside the document
+  items.push({label:'📑 አዲስ ርዕስ ጨምር · Add heading', act:function(){ addHeadingFlow(xmlRefAtPoint(e)); }});
+  items.push({label:'➕ አዲስ አንቀጽ ጨምር · Add paragraph', act:function(){ addParagraphAtPoint(e); }});
+  return items;
+}
+
+/* ---------- structural editing: headings, paragraphs, images ---------- */
+function xmlNs(){ return STATE.xmlDoc.documentElement.namespaceURI; }
+function newEl(name){ return STATE.xmlDoc.createElementNS(xmlNs(), name); }
+function nearestDiv(node){ while(node && tagName(node)!=='div') node=node.parentNode; return node; }
+
+/* Flush any pending in-place text edits (contenteditable paragraphs) into the
+   XML before a structural re-render, so unsaved typing is never lost. */
+function flushEdits(){ try{ saveTextEdits(); }catch(e){} }
+
+/* After a structural change, locate a paragraph's freshly-rendered DOM,
+   scroll it into view, flash it, and (if editable) place the caret in it. */
+function focusXmlPara(pNode){
+  var domId=null;
+  Object.keys(PARA_MAP).forEach(function(k){ if(PARA_MAP[k]===pNode) domId=k; });
+  if(!domId) return;
+  var el=document.getElementById(domId); if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  el.classList.add('para-flash');
+  var span=el.querySelector('.para-text'); if(span && span.isContentEditable) span.focus();
+  setTimeout(function(){ el.classList.remove('para-flash'); }, 2000);
+}
+
+function addParagraphAfter(refXml){
+  flushEdits();
+  if(!refXml){ return addParagraphAtEnd(); }
+  var p=newEl('p'); p.textContent='';
+  refXml.parentNode.insertBefore(p, refXml.nextSibling);
+  renderDoc(); focusXmlPara(p);
+  toast('አንቀጽ ታከለ · paragraph added');
+}
+function addParagraphAtEnd(){
+  flushEdits();
+  var body=STATE.xmlDoc.querySelector('body'); if(!body){ toast('ሰነድ የለም', true); return; }
+  var p=newEl('p'); p.textContent='';
+  var lastDiv=null, kids=childElements(body);
+  for(var i=kids.length-1;i>=0;i--){ if(tagName(kids[i])==='div'){ lastDiv=kids[i]; break; } }
+  (lastDiv||body).appendChild(p);
+  renderDoc(); focusXmlPara(p);
+  toast('አንቀጽ ታከለ · paragraph added');
+}
+/* Find the rendered block (paragraph or heading) nearest above the click point,
+   and return its corresponding XML node so new content lands where the user
+   right-clicked rather than at the very end of the document. */
+function xmlRefAtPoint(e){
+  var doc=document.getElementById('doc');
+  var blocks=doc.querySelectorAll('.para, .chapter-h, .section-h, .subsection-h, .subsubsection-h');
+  var y=e.clientY, chosen=null;
+  for(var i=0;i<blocks.length;i++){
+    var r=blocks[i].getBoundingClientRect();
+    if(r.top<=y) chosen=blocks[i]; else break;
+  }
+  if(!chosen) return null;
+  if(chosen.classList.contains('para')) return PARA_MAP[chosen.id]||null;
+  var n=chosen.getAttribute('data-node'); return n?NODE_MAP[n]:null; // a <head>
+}
+/* Insert a new paragraph exactly where the user right-clicked. */
+function addParagraphAtPoint(e){
+  var ref=xmlRefAtPoint(e);
+  if(!ref){
+    // clicked above everything → put it at the very top of the body
+    flushEdits();
+    var body=STATE.xmlDoc.querySelector('body'); if(!body){ return addParagraphAtEnd(); }
+    var p0=newEl('p'); p0.textContent='';
+    body.insertBefore(p0, body.firstChild);
+    renderDoc(); focusXmlPara(p0); toast('አንቀጽ ታከለ · paragraph added');
+    return;
+  }
+  if(tagName(ref)==='head'){
+    // clicked on/just under a heading → first paragraph of that section
+    flushEdits();
+    var p=newEl('p'); p.textContent='';
+    ref.parentNode.insertBefore(p, ref.nextSibling);
+    renderDoc(); focusXmlPara(p); toast('አንቀጽ ታከለ · paragraph added');
+    return;
+  }
+  addParagraphAfter(ref);
+}
+function deleteParagraph(paraEl){
+  flushEdits();
+  var pNode=PARA_MAP[paraEl.id]; if(!pNode){ return; }
+  confirmModal('ይህን አንቀጽ ይሰረዝ? · Delete this paragraph?', function(){
+    if(pNode.parentNode) pNode.parentNode.removeChild(pNode);
+    renderDoc(); toast('አንቀጽ ተሰረዘ · deleted');
+  });
+}
+
+var HEAD_LEVELS=[
+  {v:'1', l:'ምዕራፍ · Chapter'},
+  {v:'2', l:'ክፍል · Section'},
+  {v:'3', l:'ንዑስ ክፍል · Subsection'},
+  {v:'4', l:'ንዑስ-ንዑስ ክፍል · Sub-subsection'}
+];
+function levelOptions(sel){
+  return HEAD_LEVELS.map(function(o){
+    return '<option value="'+o.v+'"'+(o.v===String(sel)?' selected':'')+'>'+o.l+'</option>';
+  }).join('');
+}
+function typeForLevel(lv){ return lv<=1?'chapter':lv===2?'section':lv===3?'subsection':'subsubsection'; }
+
+/* Shared modal that asks for a heading title (and optionally a level). */
+function headingModal(title, defLevel, lockLevel, onSubmit){
+  var levelField = lockLevel ? '' :
+    '<div class="field"><label>ደረጃ · Level</label><select id="hdLevel">'+levelOptions(defLevel)+'</select></div>';
+  var body='<div class="field"><label>ርዕስ · Heading title</label>'+
+    '<input id="hdTitle" type="text" placeholder="ርዕስ ይጻፉ…"/></div>'+levelField;
+  openModal(title, body, [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:'ጨምር · add', primary:true, onClick:function(){
+      var t=(document.getElementById('hdTitle').value||'').trim();
+      var lv = lockLevel ? defLevel : (+document.getElementById('hdLevel').value);
+      if(!t){ toast('ርዕስ ይጻፉ', true); return; }
+      closeModal(); onSubmit(t, lv);
+    }}
+  ]);
+  setTimeout(function(){ var i=document.getElementById('hdTitle'); if(i) i.focus(); }, 30);
+}
+function makeHeadingDiv(title, level){
+  var div=newEl('div'); div.setAttribute('type', typeForLevel(level));
+  var head=newEl('head'); head.textContent=title; div.appendChild(head);
+  var p=newEl('p'); p.textContent=''; div.appendChild(p);
+  return {div:div, p:p};
+}
+/* Add a heading as a sibling after the block the user was in (or at body end). */
+function addHeadingFlow(refXml){
+  flushEdits();
+  headingModal('📑 አዲስ ርዕስ ጨምር · Add heading', 2, false, function(title, lv){
+    var made=makeHeadingDiv(title, lv);
+    var body=STATE.xmlDoc.querySelector('body');
+    var anc = refXml ? nearestDiv(refXml) : null;
+    if(anc && anc.parentNode){ anc.parentNode.insertBefore(made.div, anc.nextSibling); }
+    else if(body){ body.appendChild(made.div); }
+    renderDoc(); focusXmlPara(made.p);
+    toast('ርዕስ ታከለ · heading added');
+  });
+}
+/* Add a heading nested inside the section whose heading was clicked. */
+function addHeadingUnder(headEl){
+  flushEdits();
+  var headXml=NODE_MAP[headEl.getAttribute('data-node')]; if(!headXml) return;
+  var parentDiv=headXml.parentNode;
+  var childLv = headEl.classList.contains('chapter-h') ? 2
+              : headEl.classList.contains('section-h') ? 3 : 4;
+  headingModal('➕ ንዑስ ርዕስ ጨምር · Add sub-heading', childLv, true, function(title, lv){
+    var made=makeHeadingDiv(title, lv);
+    parentDiv.appendChild(made.div);
+    renderDoc(); focusXmlPara(made.p);
+    toast('ንዑስ ርዕስ ታከለ · sub-heading added');
+  });
+}
+function editHeading(headEl){
+  flushEdits();
+  var headXml=NODE_MAP[headEl.getAttribute('data-node')]; if(!headXml) return;
+  var body='<div class="field"><label>ርዕስ · Heading</label>'+
+    '<input id="ehTitle" type="text" value="'+escapeAttr(textOf(headXml))+'"/></div>';
+  openModal('✎ ርዕስ አስተካክል · Edit heading', body, [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:'አስቀምጥ · save', primary:true, onClick:function(){
+      var v=(document.getElementById('ehTitle').value||'').trim();
+      headXml.textContent=v; closeModal(); renderDoc(); toast('ተስተካከለ · saved');
+    }}
+  ]);
+  setTimeout(function(){ var i=document.getElementById('ehTitle'); if(i){ i.focus(); i.select(); } }, 30);
+}
+function deleteHeading(headEl){
+  flushEdits();
+  var headXml=NODE_MAP[headEl.getAttribute('data-node')]; if(!headXml) return;
+  confirmModal('ይህን ርዕስ ይሰረዝ? (አንቀጾቹ ይቆያሉ) · Delete this heading? (paragraphs stay)', function(){
+    if(headXml.parentNode) headXml.parentNode.removeChild(headXml);
+    renderDoc(); toast('ርዕስ ተሰረዘ · heading removed');
+  });
+}
+
+function updateImage(figEl){
+  var fig=NODE_MAP[figEl.getAttribute('data-node')]; if(!fig){ return; }
+  updateImageNode(fig);
+}
+function removeImage(figEl){
+  var fig=NODE_MAP[figEl.getAttribute('data-node')]; if(!fig){ return; }
+  removeImageNode(fig);
+}
+/* Re-render the editor doc and, if the Photos tab is open, its gallery too. */
+function refreshViews(){
+  renderDoc();
+  var pp=document.getElementById('photosPanel');
+  if(pp && !pp.classList.contains('hidden')) renderPhotosGallery();
+}
+function updateImageNode(fig){
+  flushEdits();
+  if(!fig){ return; }
+  var g=fig.querySelector('graphic');
+  var capNode=fig.querySelector('figDesc');
+  var curUrl=g?g.getAttribute('url'):'';
+  var curDesc=capNode?textOf(capNode):'';
+  var replacementUrl='';   // set when the user uploads a brand-new file
+  var photos=collectExistingPhotos();
+  var opts=photos.map(function(p){
+    return '<option value="'+escapeAttr(p.url)+'"'+(p.url===curUrl?' selected':'')+'>'+
+      escapeHtml(p.url.replace(/^photos\//,''))+'</option>';
+  }).join('');
+  if(!opts){ opts='<option value="'+escapeAttr(curUrl)+'" selected>'+escapeHtml(curUrl||'(none)')+'</option>'; }
+  var body=''+
+    '<div class="field"><img id="imgPreview" src="'+escapeAttr(photoSrc(curUrl))+'" alt="" '+
+      'style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid var(--rule)"/></div>'+
+    '<div class="field"><label>ምስል · Image</label><select id="imgPick">'+opts+'</select>'+
+      '<button type="button" class="btn btn-ghost" id="imgReplaceBtn" style="margin-top:.4rem">⬆ ከፋይል ቀይር · replace from file</button></div>'+
+    '<div class="field"><label>መግለጫ · Description (figDesc)</label>'+
+    '<textarea id="imgDesc">'+escapeHtml(curDesc)+'</textarea></div>';
+  openModal('🖼 ምስል ቀይር · Update image', body, [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:'አስቀምጥ · save', primary:true, onClick:function(){
+      var url = replacementUrl || document.getElementById('imgPick').value;
+      var desc=(document.getElementById('imgDesc').value||'').trim();
+      if(g) g.setAttribute('url', url);
+      if(desc){ if(!capNode){ capNode=newEl('figDesc'); fig.appendChild(capNode); } capNode.textContent=desc; }
+      else if(capNode && capNode.parentNode){ capNode.parentNode.removeChild(capNode); }
+      closeModal(); refreshViews(); toast('ምስል ተቀየረ · image updated');
+    }}
+  ]);
+  // "replace from file" → read a new image and use it as the figure's source
+  document.getElementById('imgReplaceBtn').addEventListener('click', function(){
+    photoReplaceFile.value='';
+    photoReplaceFile.onchange=function(){
+      var f=photoReplaceFile.files && photoReplaceFile.files[0]; if(!f) return;
+      registerUploadedPhoto(f, function(url){
+        replacementUrl=url;
+        var pv=document.getElementById('imgPreview'); if(pv) pv.src=photoSrc(url);
+        toast('አዲስ ምስል ተመረጠ · new image chosen');
+      });
+    };
+    photoReplaceFile.click();
+  });
+}
+function removeImageNode(fig){
+  flushEdits();
+  if(!fig){ return; }
+  confirmModal('ይህን ምስል ይሰረዝ? · Remove this image?', function(){
+    if(fig.parentNode) fig.parentNode.removeChild(fig);
+    refreshViews(); toast('ምስል ተሰረዘ · image removed');
+  });
+}
+
+/* ---------- Photos tab: gallery of every image in the document ---------- */
+var PHOTO_FIGS=[];
+function renderPhotosGallery(){
+  var grid=document.getElementById('photosGrid'); if(!grid) return;
+  if(!STATE.xmlDoc){ grid.innerHTML='<p class="am">መጀመሪያ ሰነድ ይጫኑ · load a document first</p>'; return; }
+  PHOTO_FIGS=qsa(STATE.xmlDoc,'figure');
+  if(!PHOTO_FIGS.length){
+    grid.innerHTML='<p class="am" style="grid-column:1/-1;color:var(--ink-soft)">'+
+      'ምንም ፎቶ የለም — «ከፋይል ፎቶ ጨምር» ይጫኑ · no photos yet, click “Add photo from file”.</p>';
+    return;
+  }
+  grid.innerHTML=PHOTO_FIGS.map(function(fig,i){
+    var g=fig.querySelector('graphic'); var url=g?g.getAttribute('url'):'';
+    var desc=textOf(fig.querySelector('figDesc'));
+    var inline = fig.parentNode && tagName(fig.parentNode)==='p';
+    var src=photoSrc(url);
+    return '<div class="photo-card">'+
+      '<div class="ph-img">'+
+        '<img src="'+escapeAttr(src)+'" alt="" loading="lazy" onerror="window.__imgErr(this)"/>'+
+        '<span class="ph-missing">📷<br/>ፋይል የለም · file not uploaded</span>'+
+      '</div>'+
+      '<div class="ph-body">'+
+        '<span class="ph-kind">'+(inline?'በጽሑፍ · inline':'አልበም · gallery')+'</span>'+
+        '<div class="ph-name">'+escapeHtml(url.replace(/^photos\//,'')||'(no file)')+'</div>'+
+        '<div class="ph-desc">'+(desc?escapeHtml(desc):'<span style="color:var(--ink-soft)">— መግለጫ የለም · no description</span>')+'</div>'+
+        '<div class="ph-acts">'+
+          '<button class="ph-edit" data-ph-edit="'+i+'">✎ አስተካክል · edit</button>'+
+          '<button class="ph-del" data-ph-del="'+i+'">🗑 አስወግድ · delete</button>'+
+        '</div>'+
+      '</div></div>';
+  }).join('');
+}
+/* When an image fails to load (file not yet uploaded to the repo), reveal the
+   "missing file" placeholder instead of a broken-image icon. */
+window.__imgErr=function(img){
+  img.style.display='none';
+  var card=img.closest('.ph-img') || img.closest('figure.inline-fig');
+  if(card) card.classList.add('img-missing');
+};
+document.getElementById('photosGrid').addEventListener('click', function(e){
+  var ed=e.target.closest && e.target.closest('[data-ph-edit]');
+  var dl=e.target.closest && e.target.closest('[data-ph-del]');
+  if(ed){ var f1=PHOTO_FIGS[+ed.getAttribute('data-ph-edit')]; if(f1) updateImageNode(f1); }
+  else if(dl){ var f2=PHOTO_FIGS[+dl.getAttribute('data-ph-del')]; if(f2) removeImageNode(f2); }
+});
+document.getElementById('photosAddBtn').addEventListener('click', function(){
+  if(!STATE.xmlDoc){ toast('መጀመሪያ ሰነድ ይጫኑ', true); return; }
+  pendingPhotoMode='gallery';
+  photoFileInput.value='';
+  photoFileInput.click();
+});
+
+function confirmModal(msg, onYes){
+  openModal('ማረጋገጫ · Confirm',
+    '<p class="am" style="margin:.4rem 0;line-height:1.6">'+escapeHtml(msg)+'</p>', [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:'አዎ · yes', primary:true, onClick:function(){ closeModal(); onYes(); }}
+  ]);
+}
+
+// (kept for the header "gallery photo" button, which adds a NEW photo reference)
+var pendingPhotoMode='inline';
+photoFileInput.addEventListener('change', function(){
+  var f=photoFileInput.files && photoFileInput.files[0];
+  if(!f){ return; }
+  // Read the actual image bytes so the photo is visible immediately AND gets
+  // committed with the next save (otherwise it shows as a broken placeholder).
+  registerUploadedPhoto(f, function(url, name){
+    if(pendingPhotoMode==='inline'){ photoModal('inline', { fileName:name, paraEl:ctxTargetPara, url:url }); }
+    else { photoModal('gallery', { fileName:name, url:url }); }
+  });
+});
+
+/* Read a chosen image File into memory: store its data URL under photos/<name>
+   so it renders right away, and hand it to the Stage-3 client so it is uploaded
+   to the repo on the next submit/save. Calls cb(url, name). */
+function registerUploadedPhoto(file, cb){
+  var name=(file.name||'photo').replace(/[\\"'<>]/g,'').replace(/\s+/g,'_');
+  var url='photos/'+name;
+  var r=new FileReader();
+  r.onload=function(){
+    STATE.pendingImages[url]=r.result;     // data URL for instant display
+    if(window.Stage3 && window.Stage3.addPendingPhoto){
+      window.Stage3.addPendingPhoto(name, r.result);   // queue for commit
+    }
+    cb(url, name);
+  };
+  r.onerror=function(){ toast('ፎቶውን ማንበብ አልተቻለም · could not read image', true); };
+  r.readAsDataURL(file);
+}
+
+/* Collect every distinct photo already referenced in the TEI (inline + gallery). */
+function collectExistingPhotos(){
+  var seen={}, out=[];
+  qsa(STATE.xmlDoc,'graphic').forEach(function(g){
+    var url=g.getAttribute('url'); if(!url||seen[url]) return; seen[url]=1;
+    var fig=g.closest ? g.closest('figure') : g.parentNode;
+    var desc = fig ? textOf(fig.querySelector('figDesc')) : '';
+    out.push({url:url, desc:desc});
+  });
+  return out;
+}
+
+/* Modal: pick an existing photo to insert inline at the right-clicked paragraph. */
+function galleryPickerModal(paraEl){
+  var photos=collectExistingPhotos();
+  var thumbs = photos.length
+    ? '<div class="pick-grid">'+photos.map(function(p,i){
+        return '<button type="button" class="pick-thumb" data-pick="'+i+'">'+
+          '<span class="pt-img" style="background-image:url(\''+escapeAttr(photoSrc(p.url))+'\')"></span>'+
+          '<span class="pt-name">'+escapeHtml(p.url.replace(/^photos\//,''))+'</span></button>';
+      }).join('')+'</div>'
+    : '<p class="am" style="color:var(--ink-soft)">በሰነዱ ውስጥ ምንም ፎቶ የለም — አዲስ ፎቶ ይጫኑ።</p>';
+  var body=''+
+    '<p class="hint">ፎቶው እርስዎ right-click ባደረጉበት ቦታ ላይ ይገባል · inserted where you right-clicked</p>'+
+    '<div class="field"><label>ፎቶ ይምረጡ · choose a photo</label>'+thumbs+'</div>'+
+    '<button type="button" class="btn btn-ghost" id="galUpload">⬆ ከፋይል አዲስ ፎቶ · upload new photo</button>'+
+    '<div class="field" style="margin-top:.6rem"><label>መግለጫ · description (figDesc) — ከፈለጉ ይቀይሩ</label>'+
+      '<textarea id="galDesc"></textarea></div>';
+  openModal('📷 ፎቶ አስገባ · insert photo', body, [
+    {label:'ይቅር · cancel', onClick:closeModal}
+  ]);
+  var chosenIdx=-1;
+  var grid=document.getElementById('modalBody');
+  function markChosen(btn){
+    qsa(grid,'.pick-thumb').forEach(function(b){ b.classList.toggle('chosen', b===btn); });
+  }
+  qsa(grid,'.pick-thumb').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      chosenIdx=+btn.getAttribute('data-pick');
+      markChosen(btn);
+      var d=document.getElementById('galDesc');
+      if(d && !d.value) d.value = photos[chosenIdx].desc || '';
+    });
+  });
+  // upload a brand-new photo and insert it straight away
+  document.getElementById('galUpload').addEventListener('click', function(){
+    photoReplaceFile.value='';
+    photoReplaceFile.onchange=function(){
+      var f=photoReplaceFile.files && photoReplaceFile.files[0]; if(!f) return;
+      registerUploadedPhoto(f, function(url){
+        var desc=(document.getElementById('galDesc').value||'').trim();
+        insertInlineFigure(paraEl, url, desc);
+        closeModal();
+      });
+    };
+    photoReplaceFile.click();
+  });
+  // add an Insert button that uses the selected thumbnail
+  var foot=document.getElementById('modalFoot');
+  var ins=document.createElement('button'); ins.className='btn btn-primary'; ins.textContent='አስገባ · insert';
+  ins.addEventListener('click', function(){
+    if(chosenIdx<0){ toast('ፎቶ ይምረጡ · choose a photo', true); return; }
+    var chosen=photos[chosenIdx];
+    var desc=(document.getElementById('galDesc').value||'').trim() || chosen.desc;
+    insertInlineFigure(paraEl, chosen.url, desc);
+    closeModal();
+  });
+  foot.appendChild(ins);
+}
+
+/* ---------- hover detail tooltip for tagged text ---------- */
+var tagTip=document.getElementById('tagTip');
+var tipHideT=null, tipCurrent=null;
+document.getElementById('doc').addEventListener('mouseover', function(e){
+  var span=e.target.closest ? e.target.closest('[data-tag]') : null;
+  if(!span){ return; }
+  if(span===tipCurrent && tagTip.classList.contains('show')){ return; }
+  tipCurrent=span;
+  clearTimeout(tipHideT);
+  showTagTip(span);
+});
+document.getElementById('doc').addEventListener('mouseout', function(e){
+  var span=e.target.closest ? e.target.closest('[data-tag]') : null;
+  if(!span) return;
+  // delay hide so the user can move into the tooltip (to click edit)
+  tipHideT=setTimeout(hideTagTip, 260);
+});
+tagTip.addEventListener('mouseenter', function(){ clearTimeout(tipHideT); });
+tagTip.addEventListener('mouseleave', hideTagTip);
+function hideTagTip(){ tagTip.classList.remove('show'); tipCurrent=null; }
+
+/* Build and position the tooltip with the recorded details for a tag span. */
+function showTagTip(span){
+  var kind=span.getAttribute('data-tag');
+  var ref=(span.getAttribute('data-ref')||'').replace(/^#/,'');
+  var target=span.getAttribute('data-target')||'';
+  var when=span.getAttribute('data-when')||'';
+  var text=span.getAttribute('data-text')||'';
+  var html='', editFn=null;
+
+  if(kind==='person'||kind==='place'||kind==='org'){
+    var d=ref?getEntityDetails(kind,ref):null;
+    var label = kind==='person'?'ሰው · Person':kind==='place'?'ቦታ · Place':'ድርጅት · Org';
+    html+='<div class="tt-kind">'+label+'</div>';
+    if(d){
+      html+='<div class="tt-name">'+escapeHtml(d.name||text)+'</div>';
+      if(d.sex) html+='<div class="tt-row"><b>ጾታ:</b> '+escapeHtml(d.sex==='male'?'ወንድ':d.sex==='female'?'ሴት':d.sex)+'</div>';
+      if(d.geo) html+='<div class="tt-row"><b>መጋጠሚያ:</b> '+escapeHtml(d.geo)+'</div>';
+      if(d.note) html+='<div class="tt-row">'+escapeHtml(d.note)+'</div>';
+      if(d.src) html+='<div class="tt-row"><b>ምንጭ:</b> <a href="'+escapeAttr(d.src)+'" target="_blank" rel="noopener">'+escapeHtml(d.src)+'</a></div>';
+      if(!d.note&&!d.src&&!d.geo&&!d.sex) html+='<div class="tt-row tt-empty">ተጨማሪ መረጃ የለም — ለማከል ያርትዑ</div>';
+    } else {
+      html+='<div class="tt-name">'+escapeHtml(text)+'</div>';
+      html+='<div class="tt-row tt-empty">መዝገብ አልተገኘም</div>';
+    }
+    editFn=function(){ openEntityEditorFor(kind, ref, span); };
+  }
+  else if(kind==='term'||kind==='occupation'){
+    var g=findGlossaryFor(text);
+    html+='<div class="tt-kind">ጽንሰ-ሐሳብ · Concept</div>';
+    html+='<div class="tt-name">'+escapeHtml(text)+'</div>';
+    if(g){
+      if(g.gloss) html+='<div class="tt-row">'+escapeHtml(g.gloss)+'</div>';
+      if(g.src) html+='<div class="tt-row"><b>ምንጭ:</b> <a href="'+escapeAttr(g.src)+'" target="_blank" rel="noopener">'+escapeHtml(g.src)+'</a></div>';
+      if(!g.gloss&&!g.src) html+='<div class="tt-row tt-empty">ትርጉም የለም — ለማከል ያርትዑ</div>';
+    } else {
+      html+='<div class="tt-row tt-empty">በመዝገበ-ቃላት ውስጥ የለም — ለማከል ያርትዑ</div>';
+    }
+    editFn=function(){ openConceptEditorFor(text); };
+  }
+  else if(kind==='date'){
+    html+='<div class="tt-kind">ቀን · Date</div>';
+    html+='<div class="tt-name">'+escapeHtml(text)+'</div>';
+    if(when) html+='<div class="tt-row"><b>ዓ.ም.:</b> '+escapeHtml(when)+'</div>';
+    else html+='<div class="tt-row tt-empty">ዓመት አልተመዘገበም</div>';
+    editFn=null; // dates are simple; edit by re-tagging
+  }
+  else if(kind==='ref'){
+    html+='<div class="tt-kind">ውጫዊ አገናኝ · Link</div>';
+    html+='<div class="tt-name">'+escapeHtml(text)+'</div>';
+    if(target) html+='<div class="tt-row"><b>አድራሻ:</b> <a href="'+escapeAttr(target)+'" target="_blank" rel="noopener">'+escapeHtml(target)+'</a></div>';
+    editFn=null;
+  }
+
+  if(editFn){
+    html+='<button class="tt-edit" id="ttEditBtn">✎ ያርትዑ · edit</button>';
+  }
+  tagTip.innerHTML=html;
+  var btn=document.getElementById('ttEditBtn');
+  if(btn && editFn){ btn.addEventListener('click', function(){ hideTagTip(); editFn(); }); }
+  // position above the span
+  var r=span.getBoundingClientRect();
+  tagTip.classList.add('show');
+  var top=window.scrollY+r.top-tagTip.offsetHeight-8;
+  var left=window.scrollX+r.left;
+  if(top < window.scrollY+4){ top=window.scrollY+r.bottom+8; } // flip below if no room
+  tagTip.style.left=Math.max(8, Math.min(left, window.scrollX+window.innerWidth-tagTip.offsetWidth-8))+'px';
+  tagTip.style.top=top+'px';
+}
+
+function findGlossaryFor(text){
+  var item=qsa(STATE.xmlDoc,'item').find(function(it){
+    if((it.getAttribute('xml:id')||'').indexOf('g_')!==0) return false;
+    var forms=(it.getAttribute('n')||'').split('|').map(function(s){return s.trim();});
+    var term=textOf(it.querySelector('term'));
+    return forms.indexOf(text)>=0 || term===text;
+  });
+  if(!item) return null;
+  return { id:item.getAttribute('xml:id'),
+           gloss:textOf(item.querySelector('gloss')),
+           src:textOf(item.querySelector('idno')) };
+}
+
+/* Open the entity editor pre-pointed at an existing entity (from a hover-edit). */
+function openEntityEditorFor(kind, ref, span){
+  // set lastSelection so applyInlineTag (re-tag) works on the same paragraph
+  var paraEl=span.closest('.para');
+  lastSelection={ text:(span.getAttribute('data-text')||''), paraEl:paraEl };
+  annotateEntity(kind, span.getAttribute('data-text')||'');
+  // pre-select the existing entity and switch to existing mode
+  setTimeout(function(){
+    var modeExisting=document.querySelector('input[name=entmode][value=existing]');
+    if(modeExisting){ modeExisting.checked=true; modeExisting.dispatchEvent(new Event('change')); }
+    var selEl=document.getElementById('entSelect');
+    if(selEl && ref){ selEl.value=ref; selEl.dispatchEvent(new Event('change')); }
+  }, 20);
+}
+function openConceptEditorFor(text){
+  // reuse annotateConcept; it loads existing gloss/source for this text
+  lastSelection={ text:text, paraEl:(tipCurrent?tipCurrent.closest('.para'):document.querySelector('.para')) };
+  annotateConcept('term', text);
+}
+
+function showAnnoBar(sel){
+  var rect=sel.getRangeAt(0).getBoundingClientRect();
+  annoBar.innerHTML='';
+  var actions=[
+    ['ሰው','person'],['ቦታ','place'],['ድርጅት','org'],
+    ['ጽንሰ-ሐሳብ','term'],['ማዕረግ','roleName'],['ሙያ','occupation'],
+    ['ቀን','date'],['ውጫዊ አገናኝ','ref']
+  ];
+  actions.forEach(function(a){
+    var b=document.createElement('button'); b.textContent=a[0];
+    b.addEventListener('click', function(){ openAnnotate(a[1]); });
+    annoBar.appendChild(b);
+  });
+  annoBar.classList.add('show');
+  var bx=window.scrollX+rect.left, by=window.scrollY+rect.top-annoBar.offsetHeight-8;
+  annoBar.style.left=Math.max(8,bx)+'px';
+  annoBar.style.top=Math.max(8,by)+'px';
+}
+
+/* ---------- modal helpers ---------- */
+var modalBg=document.getElementById('modalBg');
+document.getElementById('modalX').addEventListener('click', closeModal);
+modalBg.addEventListener('click', function(e){ if(e.target===modalBg) closeModal(); });
+function openModal(title, bodyHtml, footButtons){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalBody').innerHTML=bodyHtml;
+  var foot=document.getElementById('modalFoot'); foot.innerHTML='';
+  (footButtons||[]).forEach(function(b){
+    var btn=document.createElement('button'); btn.className='btn '+(b.primary?'btn-primary':'');
+    btn.textContent=b.label; if(b.id) btn.id=b.id;
+    btn.addEventListener('click', b.onClick); foot.appendChild(btn);
+  });
+  modalBg.classList.add('show');
+}
+function closeModal(){ modalBg.classList.remove('show'); }
+
+/* ---------- annotate flow ---------- */
+function openAnnotate(kind){
+  annoBar.classList.remove('show');
+  if(!lastSelection) return;
+  var sel = lastSelection.text;
+  if(kind==='person'||kind==='place'||kind==='org') return annotateEntity(kind, sel);
+  if(kind==='term'||kind==='occupation') return annotateConcept(kind, sel);
+  if(kind==='roleName') return applyInlineTag('roleName', {}, sel);
+  if(kind==='date') return annotateDate(sel);
+  if(kind==='ref') return annotateRef(sel);
+}
+
+function entityList(kind){ return kind==='person'?STATE.persons : kind==='place'?STATE.places : STATE.orgs; }
+function entityTag(kind){ return kind==='person'?'persName' : kind==='place'?'placeName' : 'orgName'; }
+function entityLabel(kind){ return kind==='person'?'ሰው':kind==='place'?'ቦታ':'ድርጅት'; }
+
+function annotateEntity(kind, sel){
+  var list=entityList(kind);
+  // try to find an existing entity whose name matches the selected text
+  var preMatch = list.find(function(e){ return (e.name||'')===sel; });
+  var opts=list.map(function(e){
+    return '<option value="'+escapeAttr(e.id)+'"'+(preMatch&&preMatch.id===e.id?' selected':'')+'>'+escapeHtml(e.name||e.id)+'</option>';
+  }).join('');
+  var sexSelect=function(val){ return '<select id="entSex"><option value="">—</option>'+
+    '<option value="male"'+(val==='male'?' selected':'')+'>ወንድ · male</option>'+
+    '<option value="female"'+(val==='female'?' selected':'')+'>ሴት · female</option></select>'; };
+  var body=''+
+    '<div class="field"><label>የተመረጠው ጽሑፍ · selected</label><div class="sel-text">'+escapeHtml(sel)+'</div></div>'+
+    '<div class="radio-row">'+
+      '<label><input type="radio" name="entmode" value="existing"'+(preMatch?' checked':(list.length?' checked':''))+'/> ነባር · existing</label>'+
+      '<label><input type="radio" name="entmode" value="new"'+(!list.length?' checked':'')+'/> አዲስ ፍጠር · create new</label>'+
+    '</div>'+
+    // EXISTING: pick + edit-known-info
+    '<div id="existingWrap">'+
+      '<div class="field"><label>'+entityLabel(kind)+' ይምረጡ</label><select id="entSelect">'+opts+'</select></div>'+
+      '<div id="existingDetails"></div>'+
+    '</div>'+
+    // NEW
+    '<div id="newWrap" class="hidden">'+
+      '<p class="hint">ስም · name: <span class="sel-text">'+escapeHtml(sel)+'</span></p>'+
+      (kind==='person'?'<div class="field"><label>ጾታ · sex</label>'+sexSelect('')+'</div>':'')+
+      (kind==='place'?'<div class="field"><label>መጋጠሚያ · coordinates</label><div id="map">ካርታ ለማሳየት የGoogle Maps ቁልፍ ያስፈልጋል<br/>(map needs a Google Maps key)</div><div class="coord-readout" id="coordOut">—</div></div>':'')+
+      '<div class="field"><label>ትርጉም / ማስታወሻ · description (note)</label><textarea id="newNote"></textarea></div>'+
+      '<div class="field"><label>ምንጭ · source URL</label><input id="newSrc" placeholder="example.com"/></div>'+
+    '</div>';
+
+  // renders the editable known-info block for the currently selected existing entity
+  function renderExisting(){
+    var id=document.getElementById('entSelect').value;
+    var d=getEntityDetails(kind,id)||{};
+    var html=''+
+      (kind==='person'?'<div class="field"><label>ጾታ · sex</label>'+sexSelect(d.sex||'')+'</div>':'')+
+      (kind==='place'?'<div class="field"><label>መጋጠሚያ · coordinates</label><input id="entGeo" value="'+escapeAttr(d.geo||'')+'" placeholder="9.712806 38.969611"/></div>':'')+
+      '<div class="field"><label>ትርጉም / ማስታወሻ · description (note)</label><textarea id="entNote">'+escapeHtml(d.note||'')+'</textarea></div>'+
+      '<div class="field"><label>ምንጭ · source URL</label><input id="entSrc" value="'+escapeAttr(d.src||'')+'" placeholder="example.com"/></div>';
+    document.getElementById('existingDetails').innerHTML=html;
+  }
+
+  openModal(entityLabel(kind)+' መሰየም · annotate', body, [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:'ተግብር · apply', primary:true, id:'entApplyBtn', onClick:function(){
+      var mode=document.querySelector('input[name=entmode]:checked').value;
+      var id;
+      if(mode==='existing'){
+        id=document.getElementById('entSelect').value;
+        // gather edits to known info and UPDATE the record
+        var extra={};
+        if(kind==='person'){ var s=document.getElementById('entSex'); if(s) extra.sex=s.value; }
+        if(kind==='place'){ var g=document.getElementById('entGeo'); if(g) extra.geo=g.value.trim(); }
+        var nt=document.getElementById('entNote'); if(nt) extra.note=nt.value.trim();
+        var sc=document.getElementById('entSrc');
+        if(sc){ var u=normalizeUrl(sc.value); if(u===null){ toast('ምንጩ ትክክለኛ አድራሻ አይጠላም', true); return; } extra.src=u; }
+        updateEntity(kind, id, extra);
+      } else {
+        id=makeId(sel, kind);
+        var ex={name:sel};
+        if(kind==='person'){ var ns2=document.getElementById('entSex'); ex.sex=ns2?ns2.value:''; }
+        if(kind==='place'){ ex.geo=window.__pickedCoord||''; }
+        ex.note=document.getElementById('newNote').value.trim();
+        var rawu=(document.getElementById('newSrc')||{}).value;
+        var nu=normalizeUrl(rawu); if(nu===null){ toast('ምንጩ ትክክለኛ አድራሻ አይጠላም', true); return; }
+        ex.src=nu;
+        createEntity(kind, id, ex);
+      }
+      applyInlineTag(entityTag(kind), {ref:'#'+id}, sel);
+      closeModal();
+    }}
+  ]);
+
+  function updateApplyLabel(){
+    var mode=document.querySelector('input[name=entmode]:checked').value;
+    var btn=document.getElementById('entApplyBtn');
+    if(btn) btn.textContent = mode==='existing' ? 'አዘምን · update' : 'ፍጠር · create';
+  }
+  // toggle existing/new
+  qsa(document,'input[name=entmode]').forEach(function(r){
+    r.addEventListener('change', function(){
+      var nw=this.value==='new';
+      document.getElementById('newWrap').classList.toggle('hidden', !nw);
+      document.getElementById('existingWrap').classList.toggle('hidden', nw);
+      if(nw && kind==='place') tryInitMap();
+      if(!nw) renderExisting();
+      updateApplyLabel();
+    });
+  });
+  // when a different existing entity is picked, refresh its known info
+  var selEl=document.getElementById('entSelect');
+  if(selEl){ selEl.addEventListener('change', renderExisting); }
+  // initial fill if existing mode is active
+  if(document.querySelector('input[name=entmode]:checked').value==='existing'){ renderExisting(); }
+  updateApplyLabel();
+}
+
+function annotateConcept(kind, sel){
+  // find existing glossary match and load its known info
+  var existing=STATE.glossary.find(function(g){ return g.forms.indexOf(sel)>=0 || g.term===sel; });
+  var curGloss='', curSrc='';
+  if(existing){
+    var item=qsa(STATE.xmlDoc,'item').find(function(it){ return it.getAttribute('xml:id')===existing.id; });
+    if(item){ curGloss=textOf(item.querySelector('gloss')); curSrc=textOf(item.querySelector('idno')); }
+  }
+  var body=''+
+    '<div class="field"><label>የተመረጠው ጽሑፍ · selected</label><div class="sel-text">'+escapeHtml(sel)+'</div></div>'+
+    (existing?'<p class="hint">ይህ ጽንሰ-ሐሳብ ቀድሞ በመዝገበ-ቃላት ውስጥ አለ። ያለውን መረጃ ማስተካከል ይችላሉ።</p>':'')+
+    '<div class="field"><label>ትርጉም · description (gloss)</label><textarea id="gGloss">'+escapeHtml(curGloss)+'</textarea></div>'+
+    '<div class="field"><label>ምንጭ · source URL</label><input id="gSrc" value="'+escapeAttr(curSrc)+'" placeholder="example.com"/></div>';
+  openModal('ጽንሰ-ሐሳብ መሰየም · annotate concept', body, [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:(existing?'አዘምን · update':'ተግብር · apply'), primary:true, onClick:function(){
+      var gloss=document.getElementById('gGloss').value.trim();
+      var src=normalizeUrl(document.getElementById('gSrc').value);
+      if(src===null){ toast('ምንጩ ትክክለኛ አድራሻ አይጠለም', true); return; }
+      upsertGlossary(sel, gloss, src);
+      applyInlineTag(kind==='occupation'?'occupation':'term', {}, sel);
+      closeModal();
+    }}
+  ]);
+}
+
+function annotateDate(sel){
+  var body=''+
+    '<div class="field"><label>የተመረጠው ጽሑፍ · selected</label><div class="sel-text">'+escapeHtml(sel)+'</div></div>'+
+    '<div class="field"><label>ዓመት (ኢትዮጵያ አቆጣጠር) · year (Ethiopian)</label><input id="dYear" placeholder="ለምሳሌ 1918"/></div>'+
+    '<p class="hint">ቀኖች ሁልጊዜ በኢትዮጵያ አቆጣጠር (ዓ.ም.) ይያዛሉ።</p>';
+  openModal('ቀን መሰየም · annotate date', body, [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:'ተግብር · apply', primary:true, onClick:function(){
+      var y=document.getElementById('dYear').value.trim();
+      var attrs={'datingMethod':'#ethiopian'};
+      if(y) attrs['when-custom']=y;
+      applyInlineTag('date', attrs, sel);
+      closeModal();
+    }}
+  ]);
+}
+
+function annotateRef(sel){
+  var body=''+
+    '<div class="field"><label>የተመረጠው ጽሑፍ · selected</label><div class="sel-text">'+escapeHtml(sel)+'</div></div>'+
+    '<div class="field"><label>አገናኝ · link URL</label><input id="rUrl" placeholder="https://..."/></div>';
+  openModal('ውጫዊ አገናኝ · external link', body, [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:'ተግብር · apply', primary:true, onClick:function(){
+      var u=normalizeUrl(document.getElementById('rUrl').value);
+      if(!u){ toast('አድራሻ ያስፈልጋል', true); return; }
+      applyInlineTag('ref', {target:u}, sel);
+      closeModal();
+    }}
+  ]);
+}
+
+/* ---------- photo flow (inline within text, or standalone gallery) ----------
+   The chosen image is read into memory and queued for upload to photos/ in the
+   repo on the next save; it is shown immediately from its in-memory data URL. */
+function photoModal(mode, opts){
+  annoBar.classList.remove('show');
+  opts = opts || {};
+  var targetPara = (mode==='inline') ? opts.paraEl : null;
+  if(mode==='inline' && !targetPara){
+    toast('የፎቶ ቦታ አልተወሰነም', true); return;
+  }
+  var chosenName = opts.fileName || '';     // already picked from the file dialog
+  var previewUrl = opts.url ? photoSrc(opts.url) : '';
+  var body=''+
+    '<p class="hint">'+(mode==='inline'
+       ? 'ፎቶው እርስዎ right-click ባደረጉበት ቦታ ላይ ይገባል · inserted where you right-clicked'
+       : 'ፎቶው ወደ አልበም (ጋለሪ) ይታከላል · added to the gallery')+'</p>'+
+    (previewUrl ? '<div class="field"><img src="'+escapeAttr(previewUrl)+'" alt="" '+
+       'style="max-width:100%;max-height:220px;border-radius:6px;border:1px solid var(--rule)"/></div>' : '')+
+    '<div class="field"><label>የተመረጠው ፎቶ · chosen image</label>'+
+      '<div class="sel-text" id="figFileShow">'+escapeHtml(chosenName||'—')+'</div>'+
+      '<p class="hint">ፋይሉ ሲያስቀምጡ ወደ <code>photos/</code> ይሰቀላል · uploaded to photos/ on save.</p></div>'+
+    '<div class="field"><label>መግለጫ · description (figDesc)</label><textarea id="figDesc"></textarea></div>'+
+    '<div class="field"><label><input type="checkbox" id="figIsPlace"/> ይህ ፎቶ የአንድ ቦታ ነው · this photo depicts a place</label></div>'+
+    '<div id="figPlaceWrap" class="hidden">'+
+      '<div class="field"><label>መጋጠሚያ · coordinates</label>'+
+        '<div id="map">ካርታ ለማሳየት የGoogle Maps ቁልፍ ያስፈልጋል<br/>(map needs a Google Maps key)</div>'+
+        '<div class="coord-readout" id="coordOut">—</div></div>'+
+    '</div>';
+  openModal(mode==='inline'?'📷 ፎቶ በጽሑፍ ውስጥ · inline photo':'📷 ፎቶ ወደ አልበም · gallery photo', body, [
+    {label:'ይቅር · cancel', onClick:closeModal},
+    {label:(mode==='inline'?'አስገባ · insert':'ወደ አልበም ጨምር · add'), primary:true, onClick:function(){
+      var file=(chosenName||'').trim();
+      if(!file){ toast('ፎቶ አልተመረጠም', true); return; }
+      var url = /^photos\//.test(file) ? file : 'photos/'+file;
+      var desc=(document.getElementById('figDesc').value||'').trim();
+      var geo = document.getElementById('figIsPlace').checked ? (window.__pickedCoord||'') : '';
+      if(mode==='inline') insertInlineFigure(targetPara, url, desc);
+      else addGalleryFigure(url, desc);
+      if(geo){ attachFigureGeo(url, geo, mode, targetPara); }
+      closeModal();
+      window.__pickedCoord='';
+    }}
+  ]);
+  document.getElementById('figIsPlace').addEventListener('change', function(){
+    var on=this.checked;
+    document.getElementById('figPlaceWrap').classList.toggle('hidden', !on);
+    if(on) tryInitMap();
+  });
+}
+
+/* Insert an inline <figure class="inline-fig"> at the START of the target paragraph's <p>. */
+function insertInlineFigure(paraEl, url, desc){
+  var pNode=PARA_MAP[paraEl.id];
+  if(!pNode){ toast('አንቀጹ አልተገኘም', true); return; }
+  var fig=buildFigure(true, url, desc);
+  pNode.insertBefore(fig, pNode.firstChild);
+  rerenderPara(paraEl.id);
+  // figure paragraphs become non-editable; re-render handles display
+  toast('ፎቶ በጽሑፍ ውስጥ ገባ · inline photo inserted');
+}
+
+/* Append a standalone <figure> to the gallery area (end of <body>, after last chapter). */
+function addGalleryFigure(url, desc){
+  var doc=STATE.xmlDoc;
+  var body=doc.querySelector('body'); if(!body){ toast('body አልተገኘም', true); return; }
+  var fig=buildFigure(false, url, desc);
+  body.appendChild(fig);
+  var pp=document.getElementById('photosPanel');
+  if(pp && !pp.classList.contains('hidden')) renderPhotosGallery();
+  toast('ፎቶ ወደ አልበም ታከለ · added to gallery');
+}
+
+function buildFigure(inline, url, desc){
+  var doc=STATE.xmlDoc, ns=doc.documentElement.namespaceURI;
+  var fig=doc.createElementNS(ns,'figure');
+  if(inline) fig.setAttribute('class','inline-fig');
+  var g=doc.createElementNS(ns,'graphic'); g.setAttribute('url', url); fig.appendChild(g);
+  if(desc){ var fd=doc.createElementNS(ns,'figDesc'); fd.textContent=desc; fig.appendChild(fd); }
+  return fig;
+}
+
+/* Attach coordinates to a figure as a <note type="coordinates"> for reference. */
+function attachFigureGeo(url, geo, mode, paraEl){
+  var doc=STATE.xmlDoc;
+  // find the figure we just made by its graphic url (last match)
+  var figs=qsa(doc,'figure').filter(function(f){ var g=f.querySelector('graphic'); return g&&g.getAttribute('url')===url; });
+  var fig=figs[figs.length-1]; if(!fig) return;
+  var ns=doc.documentElement.namespaceURI;
+  var note=doc.createElementNS(ns,'note'); note.setAttribute('type','coordinates'); note.textContent=geo;
+  fig.appendChild(note);
+  if(mode==='inline' && paraEl) rerenderPara(paraEl.id);
+}
+
+/* ---------- apply an inline tag to the current selection in the XML ----------
+   We re-tag inside the actual <p> XML node by matching the selected text.
+   To keep Stage 1 robust, we wrap the FIRST exact occurrence of the selected
+   string within the paragraph's text that isn't already inside a same-type tag. */
+function applyInlineTag(tagName, attrs, selText){
+  if(!lastSelection){ return; }
+  var el=lastSelection.paraEl, span=el.querySelector('.para-text');
+  var pNode = PARA_MAP[el.id];
+  if(!pNode){ toast('አንቀጹ አልተገኘም', true); return; }
+  // Sync pending text edits ONLY if the substantive text actually changed.
+  // Compare with ALL whitespace stripped so that rendering differences in
+  // contenteditable innerText (which can drop spaces between inline tags)
+  // never trigger a destructive full-paragraph rewrite that loses spacing.
+  if(!pNode.getElementsByTagName('figure').length){
+    var domBare=stripWs(span.innerText), xmlBare=stripWs(pNode.textContent);
+    if(domBare!==xmlBare){
+      // genuine text change: rewrite from the DOM, but keep single spaces
+      while(pNode.firstChild) pNode.removeChild(pNode.firstChild);
+      pNode.appendChild(STATE.xmlDoc.createTextNode(normWs(span.innerText)));
+    }
+  }
+  var ok = wrapTextInNode(pNode, selText, tagName, attrs);
+  if(!ok){ toast('የተመረጠው ጽሑፍ በዚህ አንቀጽ ውስጥ በትክክል አልተገኘም — እባክዎ እንደገና ይምረጡ', true); return; }
+  rerenderPara(el.id);
+  toast('ተሰየመ · tagged');
+  lastSelection=null;
+}
+/* strip ALL whitespace — used to compare substantive text content */
+function stripWs(s){ return (s||'').replace(/\s+/g,''); }
+
+/* Find selText within a text node descendant of pNode and wrap it in a new element. */
+function wrapTextInNode(pNode, selText, tag, attrs){
+  var doc=STATE.xmlDoc;
+  var walker=doc.createTreeWalker(pNode, NodeFilter.SHOW_TEXT, null, false);
+  var tn;
+  while((tn=walker.nextNode())){
+    // skip if already inside the same tag type
+    var idx=tn.nodeValue.indexOf(selText);
+    if(idx>=0){
+      var before=tn.nodeValue.slice(0,idx);
+      var mid=selText;
+      var after=tn.nodeValue.slice(idx+selText.length);
+      var parent=tn.parentNode;
+      var frag=doc.createDocumentFragment();
+      if(before) frag.appendChild(doc.createTextNode(before));
+      var elNew=doc.createElementNS(pNode.namespaceURI, tag);
+      Object.keys(attrs||{}).forEach(function(k){
+        if(k.indexOf(':')>0){ elNew.setAttribute(k, attrs[k]); }
+        else elNew.setAttribute(k, attrs[k]);
+      });
+      elNew.appendChild(doc.createTextNode(mid));
+      frag.appendChild(elNew);
+      if(after) frag.appendChild(doc.createTextNode(after));
+      parent.replaceChild(frag, tn);
+      return true;
+    }
+  }
+  return false;
+}
+
+function rerenderPara(domId){
+  var pNode=PARA_MAP[domId];
+  var el=document.getElementById(domId);
+  if(!pNode||!el) return;
+  var span=el.querySelector('.para-text');
+  span.innerHTML=inlineToHtml(pNode);
+}
+
+/* Save all in-place text edits from the editable paragraphs back into the XML.
+   Each .para-text is contenteditable; on save we write its plain text into the
+   matching <p> node. (Stage 1: plain-text edit flattens that paragraph's inline
+   tags only if its text actually changed.) */
+function saveTextEdits(){
+  var changed=0;
+  // editable document title
+  var tEl=document.getElementById('docTitle');
+  if(tEl && TITLE_NODE){
+    if(stripWs(tEl.innerText)!==stripWs(TITLE_NODE.textContent)){
+      TITLE_NODE.textContent=normWs(tEl.innerText);
+      changed++;
+    }
+  }
+  // editable history notes
+  Object.keys(NOTE_MAP).forEach(function(domId){
+    var el=document.getElementById(domId); if(!el) return;
+    var nNode=NOTE_MAP[domId];
+    if(stripWs(el.innerText)!==stripWs(nNode.textContent)){
+      while(nNode.firstChild) nNode.removeChild(nNode.firstChild);
+      nNode.appendChild(STATE.xmlDoc.createTextNode(normWs(el.innerText)));
+      changed++;
+    }
+  });
+  Object.keys(PARA_MAP).forEach(function(domId){
+    var el=document.getElementById(domId); if(!el) return;
+    var span=el.querySelector('.para-text'); if(!span) return;
+    var pNode=PARA_MAP[domId];
+    // skip paragraphs that contain inline figures or any child elements other
+    // than the basic inline tags — plain-text round-trip can't safely represent
+    // images, so we leave those untouched (they're marked non-editable too).
+    if(pNode.getElementsByTagName('figure').length){ return; }
+    // Only rewrite if the SUBSTANTIVE text changed (ignore whitespace-only
+    // differences, which come from contenteditable rendering and would
+    // otherwise wipe a paragraph's inline tags and spacing for no reason).
+    if(stripWs(span.innerText)!==stripWs(pNode.textContent)){
+      while(pNode.firstChild) pNode.removeChild(pNode.firstChild);
+      pNode.appendChild(STATE.xmlDoc.createTextNode(normWs(span.innerText)));
+      span.innerHTML=inlineToHtml(pNode);
+      changed++;
+    }
+  });
+  return changed;
+}
+/* collapse all whitespace runs to single spaces so DOM innerText and XML
+   textContent (which carries source indentation/newlines) compare fairly */
+function normWs(s){ return (s||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim(); }
+
+/* ---------- create entity records in the TEI ---------- */
+function createEntity(kind, id, extra){
+  var doc=STATE.xmlDoc, ns=doc.documentElement.namespaceURI;
+  var listSel = kind==='person'?'listPerson' : kind==='place'?'listPlace' : 'listOrg';
+  var list=doc.querySelector(listSel);
+  if(!list){ toast('የ'+listSel+' ዝርዝር አልተገኘም', true); return; }
+  var rec=doc.createElementNS(ns, kind);
+  rec.setAttribute('xml:id', id);
+  var nameTag = kind==='person'?'persName' : kind==='place'?'placeName' : 'orgName';
+  var nm=doc.createElementNS(ns,nameTag); nm.setAttribute('xml:lang','am'); nm.textContent=extra.name;
+  rec.appendChild(nm);
+  if(kind==='person' && extra.sex){ var sx=doc.createElementNS(ns,'sex'); sx.textContent=extra.sex; rec.appendChild(sx); }
+  if(kind==='place' && extra.geo){
+    var loc=doc.createElementNS(ns,'location'); var g=doc.createElementNS(ns,'geo'); g.textContent=extra.geo;
+    loc.appendChild(g); rec.appendChild(loc);
+  }
+  if(extra.note){ var nt=doc.createElementNS(ns,'note'); nt.textContent=extra.note; rec.appendChild(nt); }
+  if(extra.src){ var dn=doc.createElementNS(ns,'idno'); dn.setAttribute('type','URL'); dn.textContent=extra.src; rec.appendChild(dn); }
+  list.appendChild(rec);
+  indexEntities();
+  toast('አዲስ '+entityLabel(kind)+' ተፈጠረ');
+}
+
+function makeId(name, kind){
+  var base=(name||kind).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,24);
+  if(!base) base=kind;
+  var id=base, n=2;
+  var taken={};
+  qsa(STATE.xmlDoc,'[*|id]').forEach(function(e){ var v=e.getAttribute('xml:id'); if(v)taken[v]=1; });
+  while(taken[id]){ id=base+'_'+n; n++; }
+  return id;
+}
+
+/* ---------- glossary upsert (description + source) ---------- */
+function upsertGlossary(formText, gloss, src){
+  var doc=STATE.xmlDoc, ns=doc.documentElement.namespaceURI;
+  // find existing item by form/term
+  var item=qsa(doc,'item').find(function(it){
+    if((it.getAttribute('xml:id')||'').indexOf('g_')!==0) return false;
+    var forms=(it.getAttribute('n')||'').split('|').map(function(s){return s.trim();});
+    var term=textOf(it.querySelector('term'));
+    return forms.indexOf(formText)>=0 || term===formText;
+  });
+  if(item){
+    // ensure form present
+    var forms=(item.getAttribute('n')||'').split('|').map(function(s){return s.trim();}).filter(Boolean);
+    if(forms.indexOf(formText)<0){ forms.push(formText); item.setAttribute('n', forms.join(' | ')); }
+    if(gloss){ var gEl=item.querySelector('gloss'); if(!gEl){ gEl=doc.createElementNS(ns,'gloss'); item.appendChild(gEl);} gEl.textContent=gloss; }
+    if(src){ var iEl=item.querySelector('idno'); if(!iEl){ iEl=doc.createElementNS(ns,'idno'); iEl.setAttribute('type','URL'); item.appendChild(iEl);} iEl.textContent=src; }
+  } else {
+    var list=doc.querySelector('list[type="glossary"]') || doc.querySelector('div[type="glossary"] list');
+    if(!list){ toast('የመዝገበ-ቃላት ዝርዝር አልተገኘም', true); return; }
+    var id='g_'+makeId(formText,'concept');
+    var it=doc.createElementNS(ns,'item'); it.setAttribute('xml:id',id); it.setAttribute('n', formText);
+    var tm=doc.createElementNS(ns,'term'); tm.textContent=formText; it.appendChild(tm);
+    if(gloss){ var gl=doc.createElementNS(ns,'gloss'); gl.textContent=gloss; it.appendChild(gl); }
+    if(src){ var dn=doc.createElementNS(ns,'idno'); dn.setAttribute('type','URL'); dn.textContent=src; it.appendChild(dn); }
+    list.appendChild(it);
+  }
+  indexEntities();
+}
+
+/* ---------- Google Maps coordinate picker ---------- */
+window.__pickedCoord='';
+window.initMapReady=function(){ window.__mapsReady=true; };
+function tryInitMap(){
+  var mapEl=document.getElementById('map'); if(!mapEl) return;
+  if(!window.google||!window.google.maps){ return; } // key not provided; placeholder stays
+  mapEl.textContent='';
+  var center={lat:9.03,lng:38.74};
+  var map=new google.maps.Map(mapEl,{center:center,zoom:6,mapTypeControl:false,streetViewControl:false});
+  var marker=null;
+  map.addListener('click', function(e){
+    var lat=e.latLng.lat().toFixed(6), lng=e.latLng.lng().toFixed(6);
+    window.__pickedCoord=lat+' '+lng;
+    document.getElementById('coordOut').textContent='መጋጠሚያ · '+lat+' '+lng;
+    if(marker) marker.setMap(null);
+    marker=new google.maps.Marker({position:e.latLng,map:map});
+  });
+}
+
+/* ---------- download edited TEI ---------- */
+document.getElementById('downloadBtn').addEventListener('click', function(){
+  if(!STATE.xmlDoc) return;
+  saveTextEdits(); // capture any unsaved in-place edits first
+  // sweep: ensure no stray Cyrillic and no raw " in geo (safety)
+  var ser=new XMLSerializer();
+  var out=ser.serializeToString(STATE.xmlDoc);
+  // re-add XML declaration if missing
+  if(out.indexOf('<?xml')!==0) out='<?xml version="1.0" encoding="UTF-8"?>\n'+out;
+  var blob=new Blob([out],{type:'application/xml'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=STATE.fileName.replace(/\.xml$/,'')+'-edited.xml';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('የተስተካከለ TEI ወረደ · downloaded');
+});
+
+/* =========================================================================
+   STAGE 2 — REVIEW VIEW
+   Load original + edited TEI, summarize changes in plain Amharic,
+   approve / comment per change, export the review.
+   ========================================================================= */
+
+/* ----- tab switching ----- */
+qsa(document,'.tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    var which=t.getAttribute('data-tab');
+    qsa(document,'.tab').forEach(function(x){ x.classList.toggle('is-active', x===t); });
+    var onEdit = which==='edit', onPhotos = which==='photos', onReview = which==='review', onGuide = which==='guide';
+    document.getElementById('review').classList.toggle('hidden', !onReview);
+    document.getElementById('photosPanel').classList.toggle('hidden', !onPhotos);
+    document.getElementById('guide').classList.toggle('hidden', !onGuide);
+    document.getElementById('editTools').classList.toggle('hidden', !onEdit);
+    if(onEdit){
+      document.getElementById('editor').classList.toggle('hidden', !STATE.xmlDoc);
+      document.getElementById('loadScreen').classList.toggle('hidden', !!STATE.xmlDoc);
+    } else {
+      document.getElementById('editor').classList.add('hidden');
+      document.getElementById('loadScreen').classList.add('hidden');
+    }
+    if(onPhotos) renderPhotosGallery();
+    hideTagTip();
+  });
+});
+
+/* ----- load the two review files ----- */
+var REV = { docA:null, docB:null, nameA:'', nameB:'', changes:[] };
+function wireRevDrop(dropId, fileId, nameId, slot){
+  var drop=document.getElementById(dropId), input=document.getElementById(fileId), nameEl=document.getElementById(nameId);
+  if(!drop || !input || !nameEl) return; // manual two-file loader removed; GitHub review is used instead
+  drop.addEventListener('click', function(){ input.click(); });
+  drop.addEventListener('dragover', function(e){ e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', function(){ drop.classList.remove('over'); });
+  drop.addEventListener('drop', function(e){ e.preventDefault(); drop.classList.remove('over');
+    if(e.dataTransfer.files[0]) loadRevFile(e.dataTransfer.files[0], nameEl, drop, slot); });
+  input.addEventListener('change', function(){ if(input.files[0]) loadRevFile(input.files[0], nameEl, drop, slot); });
+}
+function loadRevFile(file, nameEl, drop, slot){
+  var r=new FileReader();
+  r.onload=function(){
+    var doc=new DOMParser().parseFromString(r.result,'application/xml');
+    if(doc.querySelector('parsererror')){ toast('የXML ስህተት — '+file.name, true); return; }
+    if(slot==='A'){ REV.docA=doc; REV.nameA=file.name; } else { REV.docB=doc; REV.nameB=file.name; }
+    nameEl.textContent=file.name; drop.classList.add('loaded');
+    var cmpBtn=document.getElementById('compareBtn');
+    if(cmpBtn) cmpBtn.disabled = !(REV.docA && REV.docB);
+  };
+  r.readAsText(file,'utf-8');
+}
+wireRevDrop('revDropA','revFileA','revNameA','A');
+wireRevDrop('revDropB','revFileB','revNameB','B');
+
+var _compareBtn=document.getElementById('compareBtn');
+if(_compareBtn) _compareBtn.addEventListener('click', function(){
+  if(!REV.docA || !REV.docB) return;
+  REV.changes = diffTEI(REV.docA, REV.docB);
+  renderChanges();
+});
+
+/* ----- the diff engine: produce plain-Amharic change descriptions ----- */
+function diffTEI(docA, docB){
+  var changes=[];
+
+  // 1) PARAGRAPH TEXT changes (match <p> by order within the body)
+  var psA=qsa(docA,'body p'), psB=qsa(docB,'body p');
+  var maxP=Math.max(psA.length, psB.length);
+  for(var i=0;i<maxP;i++){
+    var ta=psA[i]?normWs(psA[i].textContent):null;
+    var tb=psB[i]?normWs(psB[i].textContent):null;
+    var pnum=(i+1);
+    if(ta===null && tb!==null){ changes.push({kind:'add', cls:'add', pnum:pnum, label:'አንቀጽ '+pnum+' ተጨመረ · paragraph '+pnum+' added', body:'<div class="para-full"><span class="new">'+escapeHtml(tb)+'</span></div>'}); continue; }
+    if(tb===null && ta!==null){ changes.push({kind:'text', cls:'text', pnum:pnum, label:'አንቀጽ '+pnum+' ተወገደ · paragraph '+pnum+' removed', body:'<div class="para-full"><span class="old">'+escapeHtml(ta)+'</span></div>'}); continue; }
+    if(ta!==null && tb!==null && ta!==tb){
+      changes.push({kind:'text', cls:'text', pnum:pnum, label:'አንቀጽ '+pnum+' ጽሑፍ ተቀየረ · paragraph '+pnum+' text changed',
+        body: wordDiff(ta, tb)});
+    }
+  }
+
+  // 2) NEW INLINE TAGS (count tag elements by type in body text)
+  var tagTypes=[['persName','ሰው · person'],['placeName','ቦታ · place'],['orgName','ድርጅት · org'],
+                ['term','ጽንሰ-ሐሳብ · concept'],['date','ቀን · date'],['ref','አገናኝ · link'],
+                ['occupation','ሙያ · occupation'],['roleName','ማዕረግ · role']];
+  var psBodyB=qsa(docB,'body p'); // for locating the containing paragraph
+  tagTypes.forEach(function(tt){
+    var setA=tagTextSet(docA, tt[0]);
+    tagOccurrences(docB, tt[0], psBodyB).forEach(function(occ){
+      if(!setA.has(occ.text)){
+        // show the WHOLE paragraph where the tag was added, with the tagged
+        // word highlighted, plus exactly which paragraph it is.
+        var pnum = occ.paraNum>0 ? occ.paraNum : null;
+        var label = (pnum? 'አንቀጽ '+pnum+' · paragraph '+pnum+' — ':'') +
+                    'አዲስ መሰየም ('+tt[1]+') · new tag';
+        var para = occ.paraText
+          ? '<div class="para-full">'+highlightTerm(occ.paraText, occ.text)+'</div>'
+          : '«<span class="q">'+escapeHtml(occ.text)+'</span>»';
+        changes.push({kind:'tag', cls:'tagk', pnum:pnum||0, label:label,
+          body:'«<span class="q">'+escapeHtml(occ.text)+'</span>» እንደ '+tt[1]+' ተሰየመ'+para});
+      }
+    });
+  });
+
+  // 3) NEW / CHANGED ENTITY RECORDS (person/place/org by xml:id)
+  [['person','ሰው'],['place','ቦታ'],['org','ድርጅት']].forEach(function(et){
+    var mapA=recordMap(docA, et[0]), mapB=recordMap(docB, et[0]);
+    Object.keys(mapB).forEach(function(id){
+      if(!mapA[id]){
+        var ctxNew=paraContext(psBodyB, mapB[id].name);
+        changes.push({kind:'ent', cls:'entk', pnum:ctxNew.num, label:(ctxNew.num?'አንቀጽ '+ctxNew.num+' · paragraph '+ctxNew.num+' — ':'')+'አዲስ '+et[1]+' ተፈጠረ · new '+et[0],
+          body:'<span class="q">'+escapeHtml(mapB[id].name)+'</span>'+(mapB[id].note?' — '+escapeHtml(trim120(mapB[id].note)):'')+ctxNew.html});
+      } else if(mapA[id].sig!==mapB[id].sig){
+        var ctx=paraContext(psBodyB, mapB[id].name);
+        changes.push({kind:'ent', cls:'entk', pnum:ctx.num, label:(ctx.num?'አንቀጽ '+ctx.num+' · paragraph '+ctx.num+' — ':'')+et[1]+' መረጃ ተቀየረ · '+et[0]+' updated',
+          body:'<span class="q">'+escapeHtml(mapB[id].name)+'</span>: '+entityFieldDiff(mapA[id], mapB[id])+ctx.html});
+      }
+    });
+  });
+
+  // 4) GLOSSARY entries (by xml:id, gloss/source)
+  var glA=glossMap(docA), glB=glossMap(docB);
+  Object.keys(glB).forEach(function(id){
+    if(!glA[id]){
+      changes.push({kind:'ent', cls:'tagk', label:'አዲስ የቃላት ፍች · new glossary entry',
+        body:'<span class="q">'+escapeHtml(glB[id].term)+'</span>'+(glB[id].gloss?' — '+escapeHtml(trim120(glB[id].gloss)):'')});
+    } else if(glA[id].sig!==glB[id].sig){
+      changes.push({kind:'ent', cls:'tagk', label:'የቃላት ፍች ተቀየረ · glossary updated',
+        body:'<span class="q">'+escapeHtml(glB[id].term)+'</span>: '+glossFieldDiff(glA[id], glB[id])});
+    }
+  });
+
+  // 5) PHOTOS (figures by graphic url)
+  var figA=figSet(docA), figB=figSet(docB);
+  Object.keys(figB).forEach(function(url){
+    if(!figA[url]){
+      changes.push({kind:'add', cls:'add', label:'ፎቶ ተጨመረ · photo added',
+        body:'<span class="q">'+escapeHtml(url)+'</span>'+(figB[url]?' — '+escapeHtml(trim120(figB[url])):'')});
+    }
+  });
+  Object.keys(figA).forEach(function(url){
+    if(!figB[url]){
+      changes.push({kind:'text', cls:'text', label:'ፎቶ ተወገደ · photo removed',
+        body:'<span class="old">'+escapeHtml(url)+'</span>'});
+    }
+  });
+
+  return changes;
+}
+
+/* helpers for the diff */
+function tagTextSet(doc, tag){
+  var s=new Set();
+  qsa(doc,'body '+tag).forEach(function(el){ var t=normWs(el.textContent); if(t) s.add(t); });
+  return s;
+}
+/* like tagTextSet, but also returns the containing paragraph text + its number
+   so the review can show the whole paragraph where the tag was added. */
+function tagOccurrences(doc, tag, bodyPs){
+  var out=[];
+  qsa(doc,'body '+tag).forEach(function(el){
+    var t=normWs(el.textContent); if(!t) return;
+    var p = el.closest ? el.closest('p') : null;
+    var paraText = p ? normWs(p.textContent) : '';
+    var paraNum = 0;
+    if(p && bodyPs){ var idx=bodyPs.indexOf(p); if(idx>=0) paraNum=idx+1; }
+    out.push({text:t, paraText:paraText, paraNum:paraNum});
+  });
+  return out;
+}
+/* render a paragraph with the first occurrence of `term` highlighted */
+function highlightTerm(paragraph, term){
+  if(!term) return escapeHtml(paragraph);
+  var i = paragraph.indexOf(term);
+  if(i<0) return escapeHtml(paragraph);
+  return escapeHtml(paragraph.slice(0,i)) +
+    '<span class="new">'+escapeHtml(term)+'</span>' +
+    escapeHtml(paragraph.slice(i+term.length));
+}
+/* find the body paragraph that mentions `term`; returns {num, html} where html
+   is the whole paragraph (term highlighted) wrapped for display, or empty. */
+function paraContext(bodyPs, term){
+  if(!bodyPs || !term) return {num:0, html:''};
+  for(var i=0;i<bodyPs.length;i++){
+    var txt=normWs(bodyPs[i].textContent);
+    if(txt && txt.indexOf(term)>=0){
+      return {num:i+1, html:'<div class="para-full">'+highlightTerm(txt, term)+'</div>'};
+    }
+  }
+  return {num:0, html:''};
+}
+function recordMap(doc, kind){
+  var m={}; var nameTag=kind==='person'?'persName':kind==='place'?'placeName':'orgName';
+  qsa(doc,kind).forEach(function(r){
+    var id=r.getAttribute('xml:id'); if(!id) return;
+    var name=textOf(r.querySelector(nameTag));
+    var note=textOf(r.querySelector('note'));
+    var src=textOf(r.querySelector('idno'));
+    var geo=textOf(r.querySelector('geo'));
+    var sex=textOf(r.querySelector('sex'));
+    m[id]={name:name,note:note,src:src,geo:geo,sex:sex,sig:[name,note,src,geo,sex].join('|')};
+  });
+  return m;
+}
+function glossMap(doc){
+  var m={};
+  qsa(doc,'item').forEach(function(it){
+    var id=it.getAttribute('xml:id'); if(!id||id.indexOf('g_')!==0) return;
+    var term=textOf(it.querySelector('term')), gloss=textOf(it.querySelector('gloss')), src=textOf(it.querySelector('idno'));
+    m[id]={term:term,gloss:gloss,src:src,sig:[term,gloss,src].join('|')};
+  });
+  return m;
+}
+function figSet(doc){
+  var m={};
+  qsa(doc,'graphic').forEach(function(g){
+    var url=g.getAttribute('url'); if(!url) return;
+    var fig=g.closest?g.closest('figure'):g.parentNode;
+    m[url]= fig?textOf(fig.querySelector('figDesc')):'';
+  });
+  return m;
+}
+function entityFieldDiff(a,b){
+  var out=[];
+  if(a.note!==b.note) out.push(fieldChange('ማስታወሻ', a.note, b.note));
+  if(a.src!==b.src) out.push(fieldChange('ምንጭ', a.src, b.src));
+  if(a.geo!==b.geo) out.push(fieldChange('መጋጠሚያ', a.geo, b.geo));
+  if(a.sex!==b.sex) out.push(fieldChange('ጾታ', a.sex, b.sex));
+  if(a.name!==b.name) out.push(fieldChange('ስም', a.name, b.name));
+  return out.join('፣ ');
+}
+function glossFieldDiff(a,b){
+  var out=[];
+  if(a.gloss!==b.gloss) out.push(fieldChange('ትርጉም', a.gloss, b.gloss));
+  if(a.src!==b.src) out.push(fieldChange('ምንጭ', a.src, b.src));
+  if(a.term!==b.term) out.push(fieldChange('ቃል', a.term, b.term));
+  return out.join('፣ ');
+}
+function fieldChange(label, oldV, newV){
+  if(!oldV && newV) return '<b>'+label+'</b> ተጨመረ: <span class="new">'+escapeHtml(trim120(newV))+'</span>';
+  if(oldV && !newV) return '<b>'+label+'</b> ተወገደ';
+  return '<b>'+label+'</b>: <span class="old">'+escapeHtml(trim120(oldV))+'</span> → <span class="new">'+escapeHtml(trim120(newV))+'</span>';
+}
+/* word-level diff that shows the WHOLE paragraph with the changed part
+   highlighted inline: unchanged text stays plain, removed words are struck
+   through (old), added words are highlighted (new). */
+function wordDiff(a, b){
+  var wa=a.split(' '), wb=b.split(' ');
+  // find common prefix/suffix to localize the change
+  var p=0; while(p<wa.length&&p<wb.length&&wa[p]===wb[p]) p++;
+  var sa=wa.length, sb=wb.length;
+  while(sa>p&&sb>p&&wa[sa-1]===wb[sb-1]){ sa--; sb--; }
+  var prefix=wa.slice(0,p).join(' ');
+  var suffix=wa.slice(sa).join(' ');
+  var removed=wa.slice(p,sa).join(' ');
+  var added=wb.slice(p,sb).join(' ');
+  var mid='';
+  if(removed) mid+='<span class="old">'+escapeHtml(removed)+'</span>';
+  if(removed && added) mid+=' ';
+  if(added) mid+='<span class="new">'+escapeHtml(added)+'</span>';
+  if(!removed && !added) return '<div class="para-full">'+escapeHtml(b)+'</div>';
+  var parts=[];
+  if(prefix) parts.push(escapeHtml(prefix));
+  if(mid) parts.push(mid);
+  if(suffix) parts.push(escapeHtml(suffix));
+  return '<div class="para-full">'+parts.join(' ')+'</div>';
+}
+function trim120(s){ s=(s||'').trim(); return s.length>160?s.slice(0,160)+'…':s; }
+
+/* ----- render the change list with approve/comment ----- */
+function renderChanges(){
+  var box=document.getElementById('revResults');
+  var summary=document.getElementById('revSummary');
+  box.innerHTML='';
+  if(!REV.changes.length){
+    box.innerHTML='<div class="rev-empty">ምንም ለውጥ አልተገኘም · no differences found</div>';
+    summary.textContent=''; document.getElementById('exportReviewBtn').disabled=true; return;
+  }
+  summary.textContent = REV.changes.length+' ለውጦች · changes';
+  document.getElementById('exportReviewBtn').disabled=false;
+  REV.changes.forEach(function(ch, i){
+    ch.approved=false; ch.comment='';
+    var el=document.createElement('div'); el.className='change'; el.id='ch_'+i;
+    el.innerHTML=''+
+      '<div class="change-h">'+
+        '<span class="change-n">ለውጥ '+toEth(i+1)+'</span>'+
+        '<span class="change-kind '+ch.cls+'">'+escapeHtml(ch.label)+'</span>'+
+      '</div>'+
+      '<div class="change-body">'+ch.body+'</div>'+
+      '<div class="change-foot">'+
+        '<button class="btn approve-btn" data-i="'+i+'">✓ አጽድቅ · approve</button>'+
+        '<input class="cmt-input" data-i="'+i+'" placeholder="አስተያየት ለጸሐፊው · comment to author"/>'+
+        '<button class="btn cmt-btn" data-i="'+i+'">አስተያየት ላክ · send</button>'+
+        '<span class="cmt-saved" id="cs_'+i+'"></span>'+
+      '</div>';
+    box.appendChild(el);
+  });
+  // wire approve
+  qsa(box,'.approve-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var i=+b.getAttribute('data-i'); REV.changes[i].approved=!REV.changes[i].approved;
+      b.classList.toggle('on', REV.changes[i].approved);
+      document.getElementById('ch_'+i).classList.toggle('approved', REV.changes[i].approved);
+      b.textContent = REV.changes[i].approved ? '✓ ጸድቋል · approved' : '✓ አጽድቅ · approve';
+    });
+  });
+  // wire comment
+  qsa(box,'.cmt-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var i=+b.getAttribute('data-i');
+      var inp=box.querySelector('.cmt-input[data-i="'+i+'"]');
+      REV.changes[i].comment=inp.value.trim();
+      document.getElementById('cs_'+i).textContent = REV.changes[i].comment ? '✓ ተልኳል · sent' : '';
+    });
+  });
+}
+function toEth(n){ // ASCII number is fine; show as-is
+  return ''+n;
+}
+
+/* ----- export the review (approvals + comments) ----- */
+var _exportReviewBtn=document.getElementById('exportReviewBtn');
+if(_exportReviewBtn) _exportReviewBtn.addEventListener('click', function(){
+  if(!REV.changes.length) return;
+  var lines=['የግምገማ ውጤት · Review result',
+    'የመጀመሪያው ፋይል · original: '+REV.nameA,
+    'የተስተካከለው ፋይል · edited: '+REV.nameB, ''];
+  REV.changes.forEach(function(ch,i){
+    var txt=ch.body.replace(/<[^>]+>/g,'');
+    lines.push('ለውጥ '+(i+1)+' ['+ch.label+']');
+    lines.push('  '+txt);
+    lines.push('  ሁኔታ · status: '+(ch.approved?'ጸድቋል · APPROVED':'—'));
+    if(ch.comment) lines.push('  አስተያየት · comment: '+ch.comment);
+    lines.push('');
+  });
+  var blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='review-'+(REV.nameB.replace(/\.xml$/,'')||'result')+'.txt';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('ግምገማ ወረደ · review exported');
+});
+
+/* ---------- utils ---------- */
+function escapeHtml(s){ return (s||'').replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+function escapeAttr(s){ return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+var toastT=null;
+function toast(msg, err){
+  var t=document.getElementById('toast'); t.textContent=msg;
+  t.className='toast show'+(err?' err':'');
+  clearTimeout(toastT); toastT=setTimeout(function(){ t.className='toast'; }, 2600);
+}
+</script>
+<script src="stage3.js"></script>
+</body>
+</html>
