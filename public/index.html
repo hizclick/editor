@@ -2004,6 +2004,21 @@ function diffTEI(docA, docB){
     }
   });
 
+  // 6) FALLBACK — the structured passes above only inspect known node types
+  // (body paragraphs, inline tags, entity records, glossary, photos). If none
+  // of them caught anything but the documents genuinely differ (e.g. an edit to
+  // a <desc>, a secondary <note>, <location>, header/back-matter, etc.), surface
+  // a generic text diff so a real change is never reported as "no changes".
+  if(!changes.length){
+    var allA=docA && docA.documentElement ? normWs(docA.documentElement.textContent) : '';
+    var allB=docB && docB.documentElement ? normWs(docB.documentElement.textContent) : '';
+    if(allA!==allB){
+      changes.push({kind:'text', cls:'text', pnum:0,
+        label:'ሌላ ለውጥ ተገኝቷል · other change detected',
+        body: wordDiff(allA, allB)});
+    }
+  }
+
   return changes;
 }
 
