@@ -67,10 +67,14 @@ export async function onRequestPost(context) {
 }
 
 async function notifyConflict(token, cfg, number, author, reviewer) {
+  // Only @-mention the admin (hizclick) so the conflict notification goes to
+  // them alone. The contributor and reviewer are shown WITHOUT an @ so they are
+  // not pinged about a conflict they should not have to resolve.
+  const contributor = author ? author : 'unknown';
   const msg =
     `⚠️ @${cfg.adminLogin} — ይህ ለውጥ በራስ-ሰር ሊካተት አልቻለም (merge conflict)። ` +
     `እባክዎ በእጅ ይፍቱት። · This change could not be applied automatically; please resolve it manually.\n\n` +
-    `አስተዋጽዖ · contributor: ${author ? '@' + author : 'unknown'} · reviewer: @${reviewer}`;
+    `አስተዋጽዖ · contributor: ${contributor} · reviewer: ${reviewer}`;
   await gh(
     token, 'POST',
     `/repos/${cfg.upstreamOwner}/${cfg.upstreamRepo}/issues/${number}/comments`,
