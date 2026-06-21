@@ -252,6 +252,12 @@
   .change-body .para-full{white-space:pre-wrap;word-break:break-word;
     background:#fbf8f1;border:1px solid var(--line,#e7e0cf);border-radius:6px;
     padding:.55rem .7rem;margin:.15rem 0}
+  .change-body .tag-detail{margin:.4rem 0 .1rem;border:1px solid var(--line,#e7e0cf);
+    border-radius:6px;overflow:hidden;background:#fcfaf4}
+  .change-body .tag-detail-row{font-size:.86rem;line-height:1.5;padding:.3rem .6rem;
+    border-top:1px solid var(--line,#efe9da)}
+  .change-body .tag-detail-row:first-child{border-top:none}
+  .change-body .tag-detail-row b{color:var(--oxblood);font-weight:600;margin-right:.25rem}
   .change-foot{display:flex;gap:.5rem;align-items:center;margin-top:.7rem;flex-wrap:wrap}
   .change-foot .btn{font-size:.78rem;padding:.32rem .7rem}
   .approve-btn.on{background:var(--green);color:#fff;border-color:var(--green)}
@@ -1955,8 +1961,12 @@ function diffTEI(docA, docB){
         var para = occ.paraText
           ? '<div class="para-full">'+highlightTerm(occ.paraText, occ.text)+'</div>'
           : '«<span class="q">'+escapeHtml(occ.text)+'</span>»';
+        // resolve and show ALL recorded details for this tag (source,
+        // coordinates, note, date value, link, type, …) so the reviewer sees
+        // the full context, not just the tagged word.
+        var details = tagDetails(occ, docB);
         changes.push({kind:'tag', cls:'tagk', pnum:pnum||0, label:label,
-          body:'«<span class="q">'+escapeHtml(occ.text)+'</span>» እንደ '+tt[1]+' ተሰየመ'+para});
+          body:'«<span class="q">'+escapeHtml(occ.text)+'</span>» እንደ '+tt[1]+' ተሰየመ'+para+details});
       }
     });
   });
@@ -2038,9 +2048,48 @@ function tagOccurrences(doc, tag, bodyPs){
     var paraText = p ? normWs(p.textContent) : '';
     var paraNum = 0;
     if(p && bodyPs){ var idx=bodyPs.indexOf(p); if(idx>=0) paraNum=idx+1; }
-    out.push({text:t, paraText:paraText, paraNum:paraNum});
+    // capture every attribute (ref, when, when-custom, target, type, …) so the
+    // review can resolve and display the tag's full recorded details.
+    var attrs={};
+    if(el.attributes){ Array.prototype.forEach.call(el.attributes, function(a){ attrs[a.localName||a.name]=a.value; }); }
+    out.push({text:t, paraText:paraText, paraNum:paraNum, tag:tag, attrs:attrs});
   });
   return out;
+}
+/* Resolve and render ALL recorded details for an inline tag occurrence:
+   - person/place/org tags: follow ref="#id" to the entity record and list its
+     name, coordinates, sex, note and source;
+   - date tags: show the machine date value (when / when-custom / from / to);
+   - ref/link tags: show the link target;
+   - any tag: show its type when present.
+   Returns an HTML block (empty string when there is nothing extra to show). */
+function tagDetails(occ, doc){
+  if(!occ || !occ.attrs) return '';
+  var rows=[];
+  var ref=(occ.attrs.ref||occ.attrs.key||'').replace(/^#/,'');
+  var kind = occ.tag==='persName'?'person' : occ.tag==='placeName'?'place' : occ.tag==='orgName'?'org' : '';
+  if(kind && ref){
+    var rec=recordMap(doc, kind)[ref];
+    if(rec){
+      if(rec.name) rows.push(['ስም · name', rec.name]);
+      if(rec.geo)  rows.push(['መጋጠሚያ · coordinates', rec.geo]);
+      if(rec.sex)  rows.push(['ጾታ · sex', rec.sex]);
+      if(rec.note) rows.push(['ማስታወሻ · note', rec.note]);
+      if(rec.src)  rows.push(['ምንጭ · source', rec.src]);
+    } else {
+      rows.push(['መለያ · id', ref]);
+    }
+  } else if(ref){
+    rows.push(['መለያ · id', ref]);
+  }
+  var when = occ.attrs.when || occ.attrs['when-custom'] || occ.attrs.from || occ.attrs.to || occ.attrs.notBefore || occ.attrs.notAfter;
+  if(when) rows.push(['ቀን · date value', when]);
+  if(occ.attrs.target) rows.push(['አገናኝ · link', occ.attrs.target]);
+  if(occ.attrs.type) rows.push(['ዓይነት · type', occ.attrs.type]);
+  if(!rows.length) return '';
+  return '<div class="tag-detail">'+rows.map(function(r){
+    return '<div class="tag-detail-row"><b>'+escapeHtml(r[0])+'</b>: <span class="new">'+escapeHtml(trim120(r[1]))+'</span></div>';
+  }).join('')+'</div>';
 }
 /* render a paragraph with the first occurrence of `term` highlighted */
 function highlightTerm(paragraph, term){
