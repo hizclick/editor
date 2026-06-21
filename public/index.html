@@ -1944,6 +1944,26 @@ function diffTEI(docA, docB){
     }
   }
 
+  // 1b) EDITORIAL / HISTORY NOTES (body-level <note> elements, matched by order).
+  // These are siblings of paragraphs (not inside <p>), so the paragraph pass
+  // above never sees them — without this an edited note was only caught by the
+  // whole-document fallback (or missed entirely when other changes existed).
+  var nsA=bodyNotes(docA), nsB=bodyNotes(docB);
+  var maxN=Math.max(nsA.length, nsB.length);
+  for(var n=0;n<maxN;n++){
+    var na=nsA[n]!=null?nsA[n]:null, nb=nsB[n]!=null?nsB[n]:null;
+    if(na===null && nb!==null){
+      changes.push({kind:'add', cls:'add', pnum:0, label:'አዲስ ማስታወሻ ተጨመረ · note added',
+        body:'<div class="para-full"><span class="new">'+escapeHtml(nb)+'</span></div>'});
+    } else if(nb===null && na!==null){
+      changes.push({kind:'text', cls:'text', pnum:0, label:'ማስታወሻ ተወገደ · note removed',
+        body:'<div class="para-full"><span class="old">'+escapeHtml(na)+'</span></div>'});
+    } else if(na!==null && nb!==null && na!==nb){
+      changes.push({kind:'text', cls:'text', pnum:0, label:'ማስታወሻ ተቀየረ · note changed',
+        body: wordDiff(na, nb)});
+    }
+  }
+
   // 2) NEW INLINE TAGS (count tag elements by type in body text)
   var tagTypes=[['persName','ሰው · person'],['placeName','ቦታ · place'],['orgName','ድርጅት · org'],
                 ['term','ጽንሰ-ሐሳብ · concept'],['date','ቀን · date'],['ref','አገናኝ · link'],
@@ -2037,6 +2057,20 @@ function tagTextSet(doc, tag){
   var s=new Set();
   qsa(doc,'body '+tag).forEach(function(el){ var t=normWs(el.textContent); if(t) s.add(t); });
   return s;
+}
+/* Collect editorial / history notes: <note> elements that sit directly under
+   the body or a <div> (i.e. the ones rendered as editable note-hist blocks),
+   NOT the notes that belong to entity records (person/place/org) or figures.
+   Returned in document order so they can be matched positionally for diffing. */
+function bodyNotes(doc){
+  var out=[];
+  qsa(doc,'note').forEach(function(nt){
+    var p=nt.parentNode; var pt=p?tagName(p):'';
+    if(pt==='body'||pt==='div'||pt==='text'){
+      var t=normWs(nt.textContent); if(t) out.push(t);
+    }
+  });
+  return out;
 }
 /* like tagTextSet, but also returns the containing paragraph text + its number
    so the review can show the whole paragraph where the tag was added. */
