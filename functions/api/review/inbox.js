@@ -61,6 +61,9 @@ export async function onRequestGet(context) {
       // drop the automated "🔔 new edit ready for review" notifications; keep
       // every real human comment (including your own, so the thread is complete)
       .filter((c) => c.body && c.body.indexOf('🔔') !== 0)
+      // drop bot comments (e.g. the Cloudflare Pages deploy bot) — reviewers
+      // only care about human feedback, not CI/deploy chatter.
+      .filter((c) => !(c.user && (c.user.type === 'Bot' || /\[bot\]$/i.test(c.user.login || ''))))
       .map((c) => ({
         author: c.user ? c.user.login : '',
         body: c.body || '',
