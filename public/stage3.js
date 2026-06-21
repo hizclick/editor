@@ -66,7 +66,16 @@
   function renderAuth() {
     var w = document.getElementById('ghAuth');
     if (!w) return;
+    /* When signed out, the header shows only the page title — every
+       functional control (tabs, download, sub-title, auth bar) is hidden.
+       The single sign-in button lives on the home screen. */
+    var tabs = document.getElementById('tabs');
+    var tools = document.getElementById('editTools');
+    var sub = document.querySelector('.topbar .sub');
     if (SESSION.loggedIn) {
+      if (tabs) tabs.classList.remove('hidden');
+      if (tools) tools.classList.remove('hidden');
+      if (sub) sub.classList.remove('hidden');
       w.innerHTML =
         '<button class="btn btn-primary" id="ghCommitBtn">💾 አስቀምጥ</button> ' +
         '<button class="btn btn-primary" id="ghSaveBtn">ለግምገማ ላክ · Submit for review</button> ' +
@@ -77,10 +86,10 @@
       document.getElementById('ghSaveBtn').addEventListener('click', submitForReview);
       document.getElementById('ghLogoutBtn').addEventListener('click', logout);
     } else {
-      w.innerHTML = '<button class="btn btn-primary" id="ghLoginBtn">በGitHub ይግቡ · Sign in</button>';
-      document.getElementById('ghLoginBtn').addEventListener('click', function () {
-        window.location.href = '/api/auth/login';
-      });
+      if (tabs) tabs.classList.add('hidden');
+      if (tools) tools.classList.add('hidden');
+      if (sub) sub.classList.add('hidden');
+      w.innerHTML = '';
     }
     updateHomeScreen();
   }
