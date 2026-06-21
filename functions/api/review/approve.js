@@ -71,9 +71,8 @@ async function notifyConflict(token, cfg, number, author, reviewer) {
   // them alone. The contributor and reviewer are shown WITHOUT an @ so they are
   // not pinged about a conflict they should not have to resolve.
   const contributor = author ? author : 'unknown';
-  const msg =
-    `⚠️ @${cfg.adminLogin} — ይህ ለውጥ በራስ-ሰር ሊካተት አልቻለም (merge conflict)። ` +
-    `እባክዎ በእጅ ይፍቱት። · This change could not be applied automatically; please resolve it manually.\n\n` +
+  const msg = 
+    `Please contact the admin. \n\n` +
     `አስተዋጽዖ · contributor: ${contributor} · reviewer: ${reviewer}`;
   await gh(
     token, 'POST',
