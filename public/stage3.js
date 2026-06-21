@@ -475,7 +475,29 @@
       var docA = new DOMParser().parseFromString(d.base, 'application/xml');
       var docB = new DOMParser().parseFromString(d.head, 'application/xml');
       var changes = (typeof diffTEI === 'function') ? diffTEI(docA, docB) : [];
-      if (!changes.length) { target.innerHTML = '<div class="rev-empty">ምንም ለውጥ የለም</div>'; return; }
+      if (!changes.length) {
+        // The structured diff (and its text fallback) found nothing. That can
+        // still happen for a REAL change that only touches XML structure or
+        // attributes (e.g. tagging an existing word, changing a key/ref/geo) —
+        // those leave the visible text identical. Compare the raw XML so we
+        // never falsely report "no changes". Only when the raw strings are
+        // truly identical do we say there is nothing to review.
+        var rawA = (d.base || ''), rawB = (d.head || '');
+        var normA = rawA.replace(/\s+/g, ' ').trim();
+        var normB = rawB.replace(/\s+/g, ' ').trim();
+        if (normA === normB) {
+          target.innerHTML = '<div class="rev-empty">ምንም ለውጥ የለም · this version is identical to the current main (it may already be merged)</div>';
+          return;
+        }
+        // Raw XML differs but no visible-text change — surface a tag/markup diff.
+        changes = [{
+          kind: 'tag', cls: 'tagk', pnum: 0,
+          label: 'የመሰየም/መዋቅር ለውጥ ተገኝቷል · markup/tag change detected',
+          body: (typeof wordDiff === 'function')
+            ? wordDiff(normA, normB)
+            : '<div class="para-full"><span class="new">' + escapeHtml(normB.slice(0, 4000)) + '</span></div>'
+        }];
+      }
       var html = '';
       changes.forEach(function (ch, i) {
         var label = 'ለውጥ ' + (i + 1) + ' · ' + ch.label;
